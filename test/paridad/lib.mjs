@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const aqui = dirname(fileURLToPath(import.meta.url))
 export const rutaImpl = process.env.CAPTURA_IMPL ? resolve(process.env.CAPTURA_IMPL) : join(aqui, '..', 'impl', 'captura-cli.mjs')
 export const impl = (await import(pathToFileURL(rutaImpl).href)).default
+if (impl.preparar) await impl.preparar()
 export const RECETAS = join(aqui, 'fixtures', 'recetas')
 
 const matarArbol = (pid) => {

@@ -89,3 +89,18 @@ test('CAPTURA_SLOT=1 apunta la app al bloque de puertos +100', { skip: falta('sl
   const m = r.out.match(/PRUEBA puerto=(\d+) base=(\d+)/)
   assert.equal(Number(m[1]), Number(m[2]) + 100)
 })
+
+test('api: sin cookieSesion usa la sesión del navegador; sin ninguna cookie, falla diciendo qué configurar', { skip: falta('api-sin-cookie') }, async () => {
+  const r = await correr('api.mjs')
+  assert.equal(r.code, 0, r.err)
+  assert.ok(r.out.includes('PRUEBA status=200 via=cookie'), r.out)
+  assert.match(r.out, /^ok rechaza api sin sesion: api\(\): 401 y el navegador no tiene ninguna cookie de http:\/\/localhost:\d+ \(¿terminó el login\?\)\. Si la app pasa el token en una cabecera, declarar apps\.<app>\.cookieSesion/m)
+})
+
+test('7: PAGINA_COLGADA cierra el navegador y dice dónde y tras qué paso', { skip: falta('pagina-colgada') }, async () => {
+  const r = await correr('colgada.mjs', { ms: 60000 })
+  assert.equal(r.code, 7, r.out + r.err)
+  assert.match(r.err, /^PAGINA_COLGADA: la página se colgó en .+ tras .+; reintentá o corré con CAPTURA_CANAL=msedge$/m)
+  assert.ok(r.ms < 30000, `tardó ${r.ms} ms`)
+  assert.doesNotMatch(r.out, /ERROR_ESPERADO_NO_OCURRIO/)
+})

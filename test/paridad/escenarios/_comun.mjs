@@ -45,8 +45,11 @@ export function sitio({ puerto = 0 } = {}) {
       let cuerpo = ''
       q.on('data', (d) => { cuerpo += d })
       q.on('end', () => {
-        if (q.headers.authorization !== `Bearer ${token}`) { r.statusCode = 401; return r.end('{"error":"sin token"}') }
-        r.end(JSON.stringify({ metodo: q.method, ruta, cuerpo }))
+        // Dos formas de sesión: token por cabecera (Bearer) o la cookie del navegador.
+        if (q.headers.authorization === `Bearer ${token}`) return r.end(JSON.stringify({ metodo: q.method, ruta, cuerpo }))
+        if ((q.headers.cookie || '').includes(`s=${token}`)) return r.end(JSON.stringify({ metodo: q.method, ruta, cuerpo, via: 'cookie' }))
+        r.statusCode = 401
+        r.end('{"error":"sin sesión"}')
       })
       return
     }
@@ -74,5 +77,5 @@ export function registrarApp(baseUrl, nombre = 'zz') {
 
 // Una falla esperada: imprime "ok rechaza <nombre>: <mensaje>" o "ERROR_ESPERADO_NO_OCURRIO <nombre>".
 export async function rechaza(nombre, fn) {
-  try { await fn(); console.log(`ERROR_ESPERADO_NO_OCURRIO ${nombre}`) } catch (e) { console.log(`ok rechaza ${nombre}: ${String(e.message).split('\n')[0].slice(0, 160)}`) }
+  try { await fn(); console.log(`ERROR_ESPERADO_NO_OCURRIO ${nombre}`) } catch (e) { console.log(`ok rechaza ${nombre}: ${String(e.message).split('\n')[0].slice(0, 400)}`) }
 }

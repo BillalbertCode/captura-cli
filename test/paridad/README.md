@@ -23,7 +23,8 @@ Las pruebas no nombran a ninguna implementación: la reciben por un módulo cuyo
 | `variablesFaltantes(rol)` | Variables que `FALTAN_CREDENCIALES` debe nombrar, en orden |
 | `env()` | Variables extra para cada proceso (por ejemplo, un almacén aislado) |
 | `cwd` | Carpeta de trabajo de los escenarios (opcional) |
-| `capacidades` | `cli`, `manifest`, `canal`, `slot-por-puertos`, `correo-en-nucleo` |
+| `preparar()` | Se llama una vez antes de las pruebas (por ejemplo, registrar el workspace) |
+| `capacidades` | `workspace`, `escenario`, `manifest`, `canal`, `slot-por-puertos`, `api-sin-cookie`, `pagina-colgada`, `correo-en-nucleo` |
 | `defectos` | Defectos conocidos de esa implementación que una prueba salta con aviso |
 
 El descriptor de esta implementación es `test/impl/captura-cli.mjs`. Un descriptor de una implementación de
@@ -37,5 +38,7 @@ git ignora).
 | `exportaciones.test.mjs` | Las 22 exportaciones del núcleo (`exportaciones.json`), alias `paso`, nada de más, correo fuera |
 | `codigos.test.mjs` | Códigos 0, 1, 3, 4 y 5 con su texto exacto |
 | `salidas.test.mjs` | `stepNN-<desc>.png` (viewport, leyenda y marca roja medidas en los píxeles), `casos.json`, `informe.md`, `publicar/`, `recetas-candidatas.md` |
-| `funciones.test.mjs` | Sesión guardada, marcas, `explorar`, `esperarExito`, `diagnostico`, recetas, esperas, `CAPTURA_CANAL`, `CAPTURA_SLOT` |
-| `cli.test.mjs` | Contrato nuevo: código 2 (escenario inválido), 6 (`WORKSPACE_NUEVO`), `manifest.json` |
+| `funciones.test.mjs` | Sesión guardada, marcas, `explorar`, `esperarExito`, `diagnostico`, recetas, esperas, `CAPTURA_CANAL`, `CAPTURA_SLOT`, `api()` sin `cookieSesion`, código 7 |
+| `cli.test.mjs` | Contrato nuevo: código 6 (`WORKSPACE_NUEVO`, en el CLI y en la API), 2 (escenario inválido), `manifest.json` |
+
+Lo que cambia a propósito respecto a la referencia está en [docs/desviaciones.md](../../docs/desviaciones.md).

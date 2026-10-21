@@ -17,6 +17,14 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./correo": {
+      "types": "./dist/correo.d.ts",
+      "import": "./dist/correo.js"
+    },
+    "./adaptadores": {
+      "types": "./dist/adaptadores/index.d.ts",
+      "import": "./dist/adaptadores/index.js"
+    },
     "./package.json": "./package.json"
   },
   "bin": {
@@ -32,7 +40,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --test --test-concurrency=1 \"test/**/*.test.mjs\"",
+    "prepare": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test --test-concurrency=1 \"test/*.test.mjs\" \"test/paridad/*.test.mjs\"",
     "test:paridad": "node --test --test-concurrency=1 \"test/paridad/*.test.mjs\""
   },
   "dependencies": {

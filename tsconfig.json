@@ -1,17 +1,31 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "target": "es2023",
+    "module": "node20",
+    "lib": ["es2023", "dom"],
+    "types": ["node"],
     "rootDir": "src",
     "outDir": "dist",
     "declaration": true,
-    "sourceMap": false,
+    "newLine": "lf",
+
     "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "erasableSyntaxOnly": true,
     "forceConsistentCasingInFileNames": true,
-    "newLine": "lf"
+    "skipLibCheck": true
   },
   "include": ["src"]
 }

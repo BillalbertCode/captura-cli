@@ -10,8 +10,8 @@ de lo que hizo el agente en el navegador, para que una persona la revise en minu
 
 También corre pruebas de punta a punta bajo pedido a partir de un escenario en JSON.
 
-> Estado: en construcción hacia la 1.0.0. Hoy el repo contiene el contrato (lista de exportaciones) y las pruebas
-> de paridad; el núcleo llega en la fase siguiente.
+> Estado: en construcción hacia la 1.0.0. Ya están el núcleo (API de código, 22 funciones), los adaptadores
+> incluidos y el registro de workspaces. Faltan los subcomandos `run`/`validar`, `manifest.json` y el plugin.
 
 ## Instalación
 
@@ -21,6 +21,24 @@ No se publica en npm. Se instala desde GitHub, fijando una etiqueta:
 npx --yes github:billalbertcode/captura-cli#v1.0.0 --help
 npm i -g github:billalbertcode/captura-cli#v1.0.0
 ```
+
+## Uso desde un script
+
+```js
+import { sesion, marcar, foto, limpiar, caso } from 'captura-cli'
+
+const { page, cerrar } = await sesion('editor', { ticket: 'TAREA-12', app: 'web' })
+await marcar(page, page.getByRole('button', { name: 'Guardar' }), 'habilitado tras el cambio')
+await foto(page, 'guardar-habilitado', { leyenda: 'El botón Guardar se habilita al completar el formulario' })
+await limpiar(page)
+caso(page, { nombre: 'guardar habilitado', esperado: 'habilitado', observado: 'habilitado', ok: true })
+await cerrar({ ninguna: 'verificación puntual' })
+```
+
+- La primera vez en una carpeta sale con código 6 y explica cómo registrarla (`captura-cli init --yes …`).
+- Credenciales por defecto: `CAPTURA_<ROL>_USUARIO` y `CAPTURA_<ROL>_CLAVE`, en `.env` o en el entorno.
+- Correo: `import { mailpit } from 'captura-cli/correo'`. Para escribir adaptadores propios: `captura-cli/adaptadores`.
+- Diferencias con la herramienta original: [docs/desviaciones.md](docs/desviaciones.md).
 
 ## Principios
 
@@ -39,13 +57,13 @@ npm i -g github:billalbertcode/captura-cli#v1.0.0
 | 4 | `TIMEOUT_GLOBAL`: se superó el tope; navegador cerrado |
 | 5 | Hubo tramos sin receta y no se declaró qué pasó |
 | 6 | `WORKSPACE_NUEVO`: imprime las preguntas para registrar la carpeta |
+| 7 | `PAGINA_COLGADA`: la página se colgó; navegador cerrado |
 
 ## Desarrollo
 
 ```sh
-npm install
-npm run build
-npm run test:paridad
+npm install      # compila dist/ con el script prepare
+npm test         # compila y corre las pruebas de adaptadores y de paridad
 ```
 
 Ver [test/paridad/README.md](test/paridad/README.md).

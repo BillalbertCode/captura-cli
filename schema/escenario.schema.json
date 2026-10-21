@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/BillalbertCode/captura-cli/main/schema/escenario.schema.json",
+  "title": "Escenario de captura-cli",
+  "description": "Flujo en JSON para `captura-cli run`. La validación de referencia es `captura-cli validar`. Ver docs/escenarios.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "id", "rol", "casos"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "app": { "type": "string", "minLength": 1 },
+    "rol": { "type": "string", "minLength": 1 },
+    "recetas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "creadas": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "ninguna": { "type": "string", "minLength": 1 }
+      }
+    },
+    "casos": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["nombre", "pasos"],
+        "properties": {
+          "nombre": { "type": "string", "minLength": 1 },
+          "esperado": { "type": "string" },
+          "pasos": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/paso" } }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "texto": { "type": "string", "minLength": 1 },
+    "ms": { "type": "number", "exclusiveMinimum": 0 },
+    "selector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rol": { "$ref": "#/$defs/texto" },
+        "nombre": { "$ref": "#/$defs/texto" },
+        "etiqueta": { "$ref": "#/$defs/texto" },
+        "placeholder": { "$ref": "#/$defs/texto" },
+        "texto": { "$ref": "#/$defs/texto" },
+        "testid": { "$ref": "#/$defs/texto" },
+        "css": { "$ref": "#/$defs/texto" },
+        "exacto": { "type": "boolean" },
+        "n": { "type": "integer", "minimum": 0 },
+        "dentro": { "$ref": "#/$defs/selector" }
+      },
+      "oneOf": [
+        { "required": ["rol"] }, { "required": ["etiqueta"] }, { "required": ["placeholder"] },
+        { "required": ["texto"] }, { "required": ["testid"] }, { "required": ["css"] }
+      ]
+    },
+    "textoOObjeto": {
+      "oneOf": [
+        { "$ref": "#/$defs/texto" },
+        { "type": "object", "required": ["texto"], "properties": { "texto": { "$ref": "#/$defs/texto" }, "ms": { "$ref": "#/$defs/ms" } } }
+      ]
+    },
+    "paso": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "ir": { "type": "string", "pattern": "^(/|https?://)" },
+        "click": { "type": "object", "additionalProperties": false, "required": ["en"], "properties": { "en": { "$ref": "#/$defs/selector" } } },
+        "llenar": { "type": "object", "additionalProperties": false, "required": ["en", "valor"], "properties": { "en": { "$ref": "#/$defs/selector" }, "valor": { "type": "string" } } },
+        "elegir": { "type": "object", "additionalProperties": false, "required": ["en", "opcion"], "properties": { "en": { "$ref": "#/$defs/selector" }, "opcion": { "$ref": "#/$defs/texto" } } },
+        "esperar": { "$ref": "#/$defs/textoOObjeto" },
+        "esperarExito": {
+          "oneOf": [
+            { "$ref": "#/$defs/texto" },
+            { "type": "object", "additionalProperties": false, "required": ["texto"], "properties": { "texto": { "$ref": "#/$defs/texto" }, "ms": { "$ref": "#/$defs/ms" }, "dentro": { "$ref": "#/$defs/selector" } } }
+          ]
+        },
+        "esperarToast": {
+          "oneOf": [
+            { "$ref": "#/$defs/texto" },
+            { "type": "object", "additionalProperties": false, "required": ["texto"], "properties": { "texto": { "$ref": "#/$defs/texto" }, "ms": { "$ref": "#/$defs/ms" }, "foto": { "$ref": "#/$defs/texto" }, "leyenda": { "$ref": "#/$defs/texto" } } }
+          ]
+        },
+        "esperarHabilitado": { "type": "object", "additionalProperties": false, "required": ["en"], "properties": { "en": { "$ref": "#/$defs/selector" }, "ms": { "$ref": "#/$defs/ms" } } },
+        "comprobar": {
+          "type": "object", "additionalProperties": false, "required": ["en"],
+          "properties": { "en": { "$ref": "#/$defs/selector" }, "visible": { "type": "boolean" }, "texto": { "$ref": "#/$defs/texto" }, "habilitado": { "type": "boolean" } },
+          "anyOf": [{ "required": ["visible"] }, { "required": ["texto"] }, { "required": ["habilitado"] }]
+        },
+        "marcar": {
+          "type": "object", "additionalProperties": false, "required": ["en", "etiqueta"],
+          "properties": { "en": { "$ref": "#/$defs/selector" }, "etiqueta": { "$ref": "#/$defs/texto" }, "lado": { "enum": ["abajo", "arriba", "izq", "der", "dentro"] }, "numero": { "type": "integer" } }
+        },
+        "limpiar": { "const": true },
+        "foto": {
+          "type": "object", "additionalProperties": false, "required": ["descripcion", "leyenda"],
+          "properties": { "descripcion": { "$ref": "#/$defs/texto" }, "leyenda": { "$ref": "#/$defs/texto" }, "sinMarca": { "$ref": "#/$defs/texto" }, "completa": { "type": "boolean" } }
+        },
+        "cambio": {
+          "type": "object", "additionalProperties": false, "required": ["que"],
+          "properties": { "que": { "$ref": "#/$defs/texto" }, "revertir": { "type": "string" }, "revertido": { "type": "boolean" } }
+        },
+        "api": {
+          "type": "object", "additionalProperties": false, "required": ["metodo", "ruta"],
+          "properties": { "metodo": { "enum": ["get", "post", "put", "patch", "delete", "GET", "POST", "PUT", "PATCH", "DELETE"] }, "ruta": { "type": "string", "pattern": "^/" }, "cuerpo": {}, "status": { "type": "integer", "minimum": 100, "maximum": 599 } }
+        },
+        "receta": {
+          "oneOf": [
+            { "$ref": "#/$defs/texto" },
+            { "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "$ref": "#/$defs/texto" }, "args": { "type": "object" } } }
+          ]
+        },
+        "explorar": {
+          "oneOf": [
+            { "const": true },
+            { "type": "object", "additionalProperties": false, "properties": { "max": { "type": "integer", "minimum": 1 }, "completo": { "type": "boolean" } } }
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -48,6 +48,13 @@ async function catalogo(app: string): Promise<Catalogo> {
 
 const archivoApp = (n: string): string => join(dirRecetas(), `${n}.mjs`)
 
+/** Ids que no están en el catálogo de la app (comun + app). Para validar un escenario sin abrir el navegador. */
+export async function recetasFaltantes(app: string, ids: string[]): Promise<string[]> {
+  if (!ids.length) return []
+  const c = await catalogo(app)
+  return ids.filter((id) => !c[id])
+}
+
 /** Índice compacto de lo que ya existe para una app: mirarlo ANTES de escribir un script nuevo. */
 export async function listarRecetas(app: string): Promise<string[]> {
   const c = await catalogo(app)

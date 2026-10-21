@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { Page } from 'playwright'
 import { type AppConfig, type Credenciales, sonFaltantes } from './adaptadores/contrato.js'
-import { ctx } from './contexto.js'
+import { ctx, hayContexto } from './contexto.js'
 import { estado, fijarApp } from './estado.js'
 import { slug } from './fotos.js'
 import { type Abierto, type OpcionesAbrir, abrir } from './navegador.js'
@@ -35,7 +35,16 @@ export interface OpcionesSesion extends Omit<OpcionesAbrir, 'storageState'> {
   reutilizar?: boolean
 }
 
+let cargadas = false
+/** Las apps del config se cargan una vez (al importar la API o en el primer uso desde el CLI); las de memoria se suman. */
+export function cargarApps(): void {
+  if (cargadas || !hayContexto()) return
+  cargadas = true
+  for (const [n, a] of Object.entries(ctx().cfg.apps)) if (!(n in apps)) apps[n] = a
+}
+
 function elegirApp(app: string | undefined): string {
+  cargarApps()
   const nombres = Object.keys(apps)
   if (app) {
     if (!apps[app]) throw new Error(`app desconocida: ${app} (${nombres.join(', ') || 'ninguna declarada en captura.config.json'})`)

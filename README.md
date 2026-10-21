@@ -11,7 +11,8 @@ de lo que hizo el agente en el navegador, para que una persona la revise en minu
 También corre pruebas de punta a punta bajo pedido a partir de un escenario en JSON.
 
 > Estado: en construcción hacia la 1.0.0. Ya están el núcleo (API de código, 22 funciones), los adaptadores
-> incluidos y el registro de workspaces. Faltan los subcomandos `run`/`validar`, `manifest.json` y el plugin.
+> incluidos, el registro de workspaces, la configuración y los escenarios (`validar`, `run`, `explorar`). Faltan
+> `manifest.json`, los mensajes accionables de F4 y el plugin.
 
 ## Instalación
 
@@ -93,6 +94,8 @@ await cerrar({ ninguna: 'verificación puntual' })
 - La primera vez en una carpeta sale con código 6 y explica cómo registrarla (`captura-cli init --yes …`).
 - Credenciales por defecto: `CAPTURA_<ROL>_USUARIO` y `CAPTURA_<ROL>_CLAVE`, en `.env` o en el entorno.
 - Correo: `import { mailpit } from 'captura-cli/correo'`. Para escribir adaptadores propios: `captura-cli/adaptadores`.
+- Sin escribir código: un escenario en JSON con `captura-cli validar` y `captura-cli run`, y `captura-cli explorar`
+  para hallar selectores: [docs/escenarios.md](docs/escenarios.md).
 - Configuración (`captura.config.json`, variables `CAPTURA_*`, `captura-cli config`): [docs/configuracion.md](docs/configuracion.md).
 - Diferencias con la herramienta original: [docs/desviaciones.md](docs/desviaciones.md).
 

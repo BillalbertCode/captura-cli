@@ -4,9 +4,13 @@
 import { createInterface } from 'node:readline/promises'
 import { cargarUno } from './adaptadores/cargar.js'
 import { TIPOS, type TipoAdaptador } from './adaptadores/contrato.js'
-import { resolve } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+import type { OpcionesRun } from './ejecutar.js'
+import { type Escenario, recetasDe, validarEscenario } from './escenario.js'
+import { recetasFaltantes } from './recetas.js'
 import { dirWorkspace, guardarConfigUsuario, home, leerConfigUsuario, leerRegistro, propuesta, raizWorkspace } from './almacen.js'
-import { ctx, preparar } from './contexto.js'
+import { ctx, hayContexto, preparar } from './contexto.js'
 import { CODIGOS, salir } from './salida.js'
 import { VERSION } from './version.js'
 import { mensajeWorkspaceNuevo, registrar } from './workspace.js'
@@ -18,9 +22,30 @@ Uso:
   captura-cli config                       muestra el registro, las rutas y la config efectiva del workspace
   captura-cli config <clave> <valor>       cambia salidas (global|ruta), proyecto, estadisticas (si|no)
                                            o salidas-base (ruta por defecto para workspaces nuevos)
+  captura-cli validar <escenario>          revisa el escenario sin abrir el navegador (sale con 2 si no es válido)
+  captura-cli run <escenario> [opciones]   valida y ejecuta el escenario; informe.md, casos.json y capturas
+  captura-cli explorar <ruta> --rol <rol> [--app <app>]
+                                           lista lo interactivo de una pantalla con selectores sugeridos
   captura-cli recetas [app]                catálogo de recetas con versión y estado
   captura-cli adaptadores verificar        comprueba cada adaptador contra el contrato
   captura-cli --version | --help
+
+  <escenario> es una ruta a un .json o un nombre de la carpeta de escenarios del proyecto.
+
+Opciones de run y explorar:
+  --id <id>             carpeta de salida (manda sobre "id" del escenario)
+  --app <app>           app del config (por defecto la única declarada)
+  --rol <rol>           rol con el que entrar (manda sobre "rol" del escenario)
+  --browser <b>         chromium | firefox | webkit (por defecto chromium)
+  --canal <c>           msedge | chrome: el navegador instalado (= CAPTURA_CANAL)
+  --headless | --no-headless
+  --viewport <AxB>      tamaño de la captura, p. ej. 1366x900
+  --sesion-min <n>      minutos que vale la sesión guardada
+  --sin-sesion          forzar login
+  --timeout <s>         tope de la corrida en segundos (por defecto 300)
+  --slot <n|auto>       slot de la corrida (= CAPTURA_SLOT)
+  --out <ruta>          carpeta de salidas (= CAPTURA_OUT)
+  --config <ruta>       captura.config.json (= CAPTURA_CONFIG)
 
 La API de código: import { sesion, foto, marcar, caso } from 'captura-cli'
 
@@ -28,6 +53,7 @@ Códigos de salida: 0 ok · 1 error · 2 escenario inválido · 3 FALTAN_CREDENC
   · 5 recetas sin declarar · 6 WORKSPACE_NUEVO · 7 PAGINA_COLGADA`
 
 interface Args { pos: string[]; op: Record<string, string | true> }
+const CON_VALOR = ['salidas', 'proyecto', 'estadisticas', 'id', 'app', 'rol', 'browser', 'canal', 'viewport', 'sesion-min', 'timeout', 'slot', 'out', 'config']
 function parsear(argv: string[]): Args {
   const pos: string[] = [], op: Record<string, string | true> = {}
   for (let i = 0; i < argv.length; i++) {
@@ -35,7 +61,7 @@ function parsear(argv: string[]): Args {
     if (!a.startsWith('--')) { pos.push(a); continue }
     const [k, v] = a.slice(2).split(/=(.*)/s)
     if (v !== undefined) op[k!] = v
-    else if (argv[i + 1] !== undefined && !argv[i + 1]!.startsWith('--') && ['salidas', 'proyecto', 'estadisticas'].includes(k!)) op[k!] = argv[++i]!
+    else if (argv[i + 1] !== undefined && !argv[i + 1]!.startsWith('--') && CON_VALOR.includes(k!)) op[k!] = argv[++i]!
     else op[k!] = true
   }
   return { pos, op }
@@ -95,6 +121,98 @@ function cambiarConfig(clave: string, valor: string | undefined): number {
   return 0
 }
 
+// ---------- escenarios: validar, run, explorar ----------
+
+function opcionesNavegador(op: Args['op']): OpcionesRun {
+  const o: OpcionesRun = {}
+  const b = texto(op['browser'])
+  if (b !== undefined) {
+    if (b !== 'chromium' && b !== 'firefox' && b !== 'webkit') return salir(`--browser: chromium, firefox o webkit (recibido "${b}")`, CODIGOS.ERROR)
+    o.browser = b
+  }
+  if (op['headless']) o.headless = true
+  if (op['no-headless']) o.headless = false
+  const vp = texto(op['viewport'])
+  if (vp !== undefined) {
+    const m = vp.match(/^(\d+)x(\d+)$/)
+    if (!m) return salir(`--viewport: ANCHOxALTO, p. ej. 1366x900 (recibido "${vp}")`, CODIGOS.ERROR)
+    o.viewport = { width: Number(m[1]), height: Number(m[2]) }
+  }
+  const t = texto(op['timeout'])
+  if (t !== undefined) {
+    if (!/^\d+$/.test(t) || Number(t) <= 0) return salir(`--timeout: segundos (recibido "${t}")`, CODIGOS.ERROR)
+    o.maxMs = Number(t) * 1000
+  }
+  if (op['sin-sesion']) o.reutilizar = false
+  return o
+}
+
+/** Ruta del escenario: un archivo que existe, o un nombre de la carpeta de escenarios del proyecto. */
+function rutaEscenario(ref: string): string | null {
+  if (existsSync(ref)) return resolve(ref)
+  if (!hayContexto()) return null
+  for (const n of [ref, `${ref}.json`]) { const f = join(ctx().rutas.escenarios, n); if (existsSync(f)) return f }
+  return null
+}
+
+/** Lee, aplica --id/--rol/--app y valida (estructura, y con contexto: app, id y recetas). Sale con 2 si no sirve. */
+async function cargarEscenario(ref: string | undefined, op: Args['op']): Promise<Escenario> {
+  if (!ref) return salir('ESCENARIO_INVALIDO: falta el escenario (ruta a un .json o nombre en la carpeta de escenarios)', CODIGOS.ESCENARIO_INVALIDO)
+  const f = rutaEscenario(ref)
+  if (!f) return salir(`ESCENARIO_INVALIDO: no existe "${ref}"${hayContexto() ? ` (ni en ${ctx().rutas.escenarios})` : ''}`, CODIGOS.ESCENARIO_INVALIDO)
+  let crudo: unknown
+  try { crudo = JSON.parse(readFileSync(f, 'utf8').replace(/^﻿/, '')) } catch (e) {
+    return salir(`ESCENARIO_INVALIDO: ${f}: no es JSON válido (${(e as Error).message})`, CODIGOS.ESCENARIO_INVALIDO)
+  }
+  if (typeof crudo === 'object' && crudo !== null && !Array.isArray(crudo)) {
+    const o = crudo as Record<string, unknown>
+    for (const k of ['id', 'rol', 'app']) { const v = texto(op[k]); if (v !== undefined) o[k] = v }
+  }
+  const r = validarEscenario(crudo)
+  const errores = r.ok ? [] : [...r.errores]
+  if (r.ok && hayContexto()) {
+    const c = ctx()
+    const esc = r.escenario
+    const apps = Object.keys(c.cfg.apps)
+    if (esc.app && !c.cfg.apps[esc.app]) errores.push(`app: "${esc.app}" no está en captura.config.json (${apps.join(', ') || 'ninguna declarada'})`)
+    if (!esc.app && apps.length !== 1) errores.push(`app: falta (hay ${apps.length ? `varias: ${apps.join(', ')}` : 'ninguna declarada'}); declarar "app" o pasar --app`)
+    const prob = c.adaptadores.identificador.validar(esc.id)
+    if (prob) errores.push(`id: ${prob}`)
+    const app = esc.app ?? apps[0]
+    if (app) {
+      const faltan = await recetasFaltantes(app, recetasDe(esc))
+      if (faltan.length) errores.push(`recetas usadas que no existen para ${app}: ${faltan.join(', ')} (catálogo: captura-cli recetas ${app})`)
+    }
+  }
+  if (errores.length) return salir([`ESCENARIO_INVALIDO: ${f}`, ...errores.map((x) => `  - ${x}`)].join('\n'), CODIGOS.ESCENARIO_INVALIDO)
+  return (r as { escenario: Escenario }).escenario
+}
+
+async function validar(ref: string | undefined, op: Args['op']): Promise<number> {
+  const esc = await cargarEscenario(ref, op)
+  const pasos = esc.casos.reduce((n, c) => n + c.pasos.length, 0)
+  console.log(`escenario válido: ${esc.casos.length} caso(s), ${pasos} paso(s)${hayContexto() ? '' : ' (sin workspace registrado: no se comprobaron app, id ni recetas)'}`)
+  return CODIGOS.OK
+}
+
+async function explorarCli(ruta: string | undefined, op: Args['op']): Promise<number> {
+  if (!ruta || !/^(\/|https?:\/\/)/.test(ruta)) return salir('explorar: falta la ruta (p. ej. /inicio o una URL)', CODIGOS.ERROR)
+  const rol = texto(op['rol'])
+  if (!rol) return salir('explorar: falta --rol (con qué rol entrar)', CODIGOS.ERROR)
+  const { sesion } = await import('./sesion.js')
+  const { explorar } = await import('./explorar.js')
+  const { estado } = await import('./estado.js')
+  const app = texto(op['app'])
+  const { page, cerrar } = await sesion(rol, { ticket: texto(op['id']) ?? 'explorar', ...(app ? { app } : {}), ...opcionesNavegador(op) })
+  const e = estado(page)
+  e.grabar = false // explorar no es un tramo para recetas
+  await page.goto(/^https?:/.test(ruta) ? ruta : (e.app?.baseUrl ?? '') + ruta, { waitUntil: 'domcontentloaded' })
+  await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {})
+  await explorar(page, { completo: true, max: 80 })
+  await cerrar({ ninguna: 'exploración desde el CLI' })
+  return CODIGOS.OK
+}
+
 async function main(): Promise<number> {
   const { pos, op } = parsear(process.argv.slice(2))
   const cmd = pos[0]
@@ -102,8 +220,25 @@ async function main(): Promise<number> {
   if (op['help'] || cmd === 'help' || !cmd) { console.log(AYUDA); return cmd || op['help'] ? 0 : 1 }
   if (cmd === 'init') return init(op)
   if (cmd === 'config' && pos[1]) return cambiarConfig(pos[1], pos[2])
+  // Opciones que equivalen a variables de entorno: se aplican antes de resolver el contexto.
+  for (const [o, v] of [['config', 'CAPTURA_CONFIG'], ['out', 'CAPTURA_OUT'], ['slot', 'CAPTURA_SLOT'], ['canal', 'CAPTURA_CANAL']] as const) {
+    const x = texto(op[o])
+    if (x !== undefined) process.env[v] = o === 'config' || o === 'out' ? resolve(x) : x
+  }
   await preparar()
+  if (cmd === 'validar') return validar(pos[1], op)
   const c = ctx() // sale con 6 si el workspace no está registrado, con 1 si la config es inválida
+  if (cmd === 'run') {
+    const esc = await cargarEscenario(pos[1], op)
+    const sm = texto(op['sesion-min'])
+    if (sm !== undefined) {
+      if (!/^\d+(\.\d+)?$/.test(sm)) return salir(`--sesion-min: minutos (recibido "${sm}")`, CODIGOS.ERROR)
+      c.cfg.sesionMin = Number(sm)
+    }
+    const { ejecutarEscenario } = await import('./ejecutar.js')
+    return ejecutarEscenario(esc, opcionesNavegador(op))
+  }
+  if (cmd === 'explorar') return explorarCli(pos[1], op)
   if (cmd === 'config') {
     const r = leerRegistro(c.raiz)
     const ad = (t: TipoAdaptador): string => {

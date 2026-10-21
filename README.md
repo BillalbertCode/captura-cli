@@ -93,6 +93,7 @@ await cerrar({ ninguna: 'verificación puntual' })
 - La primera vez en una carpeta sale con código 6 y explica cómo registrarla (`captura-cli init --yes …`).
 - Credenciales por defecto: `CAPTURA_<ROL>_USUARIO` y `CAPTURA_<ROL>_CLAVE`, en `.env` o en el entorno.
 - Correo: `import { mailpit } from 'captura-cli/correo'`. Para escribir adaptadores propios: `captura-cli/adaptadores`.
+- Configuración (`captura.config.json`, variables `CAPTURA_*`, `captura-cli config`): [docs/configuracion.md](docs/configuracion.md).
 - Diferencias con la herramienta original: [docs/desviaciones.md](docs/desviaciones.md).
 
 ## Principios

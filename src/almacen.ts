@@ -98,11 +98,14 @@ export const dentroDe = (padre: string, hijo: string): boolean => {
  * Devuelve la línea agregada, o null si no hizo falta.
  */
 export function excluirDeGit(ruta: string): string | null {
-  const existente = existsSync(ruta) ? ruta : dirname(ruta)
+  let existente = resolve(ruta) // la ruta puede no existir todavía: se pregunta a git desde su primer ancestro real
+  while (!existsSync(existente) && dirname(existente) !== existente) existente = dirname(existente)
   const comun = gitComun(existente)
   if (!comun || basename(comun) !== '.git') return null
   const repo = dirname(comun)
   if (!dentroDe(repo, ruta)) return null
+  const ignorada = spawnSync('git', ['check-ignore', '-q', ruta], { cwd: repo, timeout: 10000, stdio: 'ignore', windowsHide: true })
+  if (ignorada.status === 0) return null // ya la ignora el .gitignore o el exclude
   const linea = '/' + relative(repo, ruta).split(sep).join('/') + '/'
   const f = join(comun, 'info', 'exclude')
   const actual = existsSync(f) ? readFileSync(f, 'utf8') : ''

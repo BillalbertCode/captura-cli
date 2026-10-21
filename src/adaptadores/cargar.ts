@@ -59,7 +59,8 @@ export async function cargarAdaptadores(cfg: Config, ctx: ContextoAdaptador): Pr
     const inst = await cargarUno(tipo, cfg.adaptadores[tipo] ?? DEFECTO_POR_TIPO[tipo], cfg, ctx)
     Object.assign(r, { [tipo]: inst })
   }
-  const correo = cfg.adaptadores.correo
+  // El correo es opcional: se carga si se declara su adaptador, o con "extras": ["correo"] (incluido: mailpit).
+  const correo = cfg.adaptadores.correo ?? (cfg.extras.includes('correo') ? 'builtin:mailpit' : undefined)
   if (correo) r.correo = (await cargarUno('correo', correo, cfg, ctx)) as AdaptadorCorreo
   return r as Adaptadores
 }

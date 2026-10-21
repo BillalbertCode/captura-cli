@@ -6,6 +6,9 @@ import { join, resolve } from 'node:path'
 import { type Registro, dirWorkspace, excluirDeGit, guardarRegistro, home, idWorkspace, leerRegistro, propuesta } from './almacen.js'
 import { VERSION } from './version.js'
 
+/** Esquema de captura.config.json para el editor (autocompletado y validación). */
+export const ESQUEMA = 'https://raw.githubusercontent.com/BillalbertCode/captura-cli/main/schema/captura.config.schema.json'
+
 export function mensajeWorkspaceNuevo(raiz: string): string {
   const p = propuesta(raiz)
   return [
@@ -36,7 +39,7 @@ export function registrar(raiz: string, o: OpcionesInit): { registro: Registro; 
   mkdirSync(join(proyecto, 'adaptadores'), { recursive: true })
   const cfg = join(proyecto, 'captura.config.json')
   if (!existsSync(cfg)) {
-    writeFileSync(cfg, JSON.stringify({ apps: {} }, null, 2) + '\n')
+    writeFileSync(cfg, JSON.stringify({ $schema: ESQUEMA, apps: {} }, null, 2) + '\n')
     avisos.push(`config: creado ${cfg} (declarar las apps a probar)`)
   }
   const ex = excluirDeGit(salidas)

@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/BillalbertCode/captura-cli/main/schema/captura.config.schema.json",
+  "title": "captura.config.json",
+  "description": "Configuración de un proyecto para captura-cli. Toda clave es opcional; los valores por defecto son neutros. Referencia: docs/configuracion.md",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "viewport": {
+      "description": "Tamaño de las capturas (viewport). Por defecto 1366x900.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "sesionMin": {
+      "description": "Minutos que vale una sesión guardada antes de volver a hacer login. Por defecto 15; 0 = no reutilizar.",
+      "type": "number",
+      "minimum": 0
+    },
+    "apps": {
+      "description": "Apps a probar, por nombre. Con una sola app, sesion() la usa sin { app }.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/app" }
+    },
+    "id": {
+      "description": "Formato del id de cada corrida (nombre de la carpeta de salida).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "patron": { "description": "Expresión regular. Por defecto ^[A-Za-z0-9._-]+$", "type": "string" },
+        "mayusculas": { "description": "Carpeta en mayúsculas. Por defecto true.", "type": "boolean" }
+      }
+    },
+    "credenciales": {
+      "description": "Opciones del adaptador incluido builtin:env: <prefijo><ROL>_USUARIO y <prefijo><ROL>_CLAVE.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "archivo": { "description": "Archivo de variables, relativo a la carpeta del config. Por defecto .env", "type": "string" },
+        "prefijo": { "description": "Por defecto CAPTURA_", "type": "string" },
+        "alias": {
+          "description": "Rol -> nombre en las variables, p. ej. { \"jefe de area\": \"JEFE\" }",
+          "type": "object",
+          "additionalProperties": { "type": "string", "pattern": "^[A-Z0-9_]+$" }
+        }
+      }
+    },
+    "rutas": {
+      "description": "Rutas relativas a la carpeta del config. Sin declarar: el almacén global o la carpeta del proyecto registrada.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "salidas": { "type": "string", "minLength": 1 },
+        "recetas": { "type": "string", "minLength": 1 },
+        "helpers": { "type": "string", "minLength": 1 },
+        "escenarios": { "type": "string", "minLength": 1 },
+        "sesiones": { "description": "Tienen cookies de usuarios reales: si cae en un repo se excluye por .git/info/exclude.", "type": "string", "minLength": 1 }
+      }
+    },
+    "adaptadores": {
+      "description": "\"builtin:<nombre>\", una ruta a un módulo propio, o { \"usa\": …, …opciones }. Ver docs/adaptadores.md",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "credenciales": { "$ref": "#/$defs/adaptador" },
+        "identificador": { "$ref": "#/$defs/adaptador" },
+        "entorno": { "$ref": "#/$defs/adaptador" },
+        "publicacion": { "$ref": "#/$defs/adaptador" },
+        "correo": { "$ref": "#/$defs/adaptador" }
+      }
+    },
+    "extras": {
+      "description": "Partes opcionales. \"correo\" carga builtin:mailpit si no se declara adaptadores.correo.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["correo"] }
+    }
+  },
+  "$defs": {
+    "adaptador": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "object", "required": ["usa"], "properties": { "usa": { "type": "string" } } }
+      ]
+    },
+    "app": {
+      "type": "object",
+      "required": ["baseUrl", "login", "boton", "postLogin"],
+      "properties": {
+        "baseUrl": { "type": "string", "pattern": "^https?://[^/]+" },
+        "login": { "description": "Ruta de la pantalla de login, p. ej. /login", "type": "string", "minLength": 1 },
+        "campoUsuario": { "type": "string" },
+        "campoClave": { "type": "string" },
+        "campos": {
+          "description": "Login con varios campos: el valor de cada uno sale de las credenciales.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["selector", "valor"],
+            "properties": {
+              "selector": { "type": "string" },
+              "valor": { "enum": ["usuario", "clave", "letra", "numero"] }
+            }
+          }
+        },
+        "boton": { "description": "Nombre accesible del botón de entrar", "type": "string", "minLength": 1 },
+        "postLogin": { "description": "Patrón de URL tras el login, p. ej. **/inicio", "type": "string", "minLength": 1 },
+        "inicio": { "type": "string" },
+        "cookieSesion": { "description": "Cookie con el token que api() manda como Bearer; null si la sesión viaja solo en cookies", "type": ["string", "null"] },
+        "apiBase": { "type": "string" }
+      },
+      "anyOf": [
+        { "required": ["campos"] },
+        { "required": ["campoUsuario", "campoClave"] }
+      ]
+    }
+  }
+}

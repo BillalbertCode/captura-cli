@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { join, resolve } from 'node:path'
 import { AdaptadorInvalido, cargarAdaptadores } from './adaptadores/cargar.js'
 import type { Adaptadores } from './adaptadores/contrato.js'
-import { type Registro, dentroDe, dirWorkspace, guardarRegistro, leerRegistro, raizWorkspace } from './almacen.js'
+import { type Registro, dentroDe, dirWorkspace, excluirDeGit, guardarRegistro, leerRegistro, raizWorkspace } from './almacen.js'
 import { type Config, ConfigInvalida, leerConfig } from './config.js'
 import { CODIGOS, alSalir, salir } from './salida.js'
 import { mensajeWorkspaceNuevo } from './workspace.js'
@@ -13,7 +13,10 @@ export interface Rutas {
   /** Carpeta de las capturas: una subcarpeta por id. */
   salidas: string
   recetas: string
+  helpers: string
+  escenarios: string
   estadoRecetas: string
+  /** Sesiones guardadas (storageState) del slot: tienen cookies de usuarios reales, nunca van a un repo. */
   sesiones: string
   servicios: string
   cache: string
@@ -79,10 +82,17 @@ export async function preparar(cwd = process.cwd()): Promise<void> {
     const rutas: Rutas = {
       salidas: process.env['CAPTURA_OUT'] ? resolve(process.env['CAPTURA_OUT']) : cfg.rutas.salidas ? rel(cfg.rutas.salidas) : registro.salidas,
       recetas: process.env['CAPTURA_RECETAS'] ? resolve(process.env['CAPTURA_RECETAS']) : cfg.rutas.recetas ? rel(cfg.rutas.recetas) : join(registro.proyecto, 'recetas'),
+      helpers: cfg.rutas.helpers ? rel(cfg.rutas.helpers) : join(registro.proyecto, 'helpers'),
+      escenarios: cfg.rutas.escenarios ? rel(cfg.rutas.escenarios) : join(registro.proyecto, 'escenarios'),
       estadoRecetas: join(dirWs, 'recetas-estado.json'),
-      sesiones: join(dirSlot, 'sesiones'),
+      sesiones: cfg.rutas.sesiones ? join(rel(cfg.rutas.sesiones), 'slots', String(slot)) : join(dirSlot, 'sesiones'),
       servicios: join(dirSlot, 'servicios.json'),
       cache: join(dirSlot, 'cache'),
+    }
+    // Salidas y sesiones elegidas dentro de un repo: se excluyen por .git/info/exclude (el .gitignore no se toca).
+    for (const [que, ruta] of [['salidas', rutas.salidas], ['sesiones', rutas.sesiones]] as const) {
+      const linea = excluirDeGit(ruta)
+      if (linea) console.error(`AVISO: ${que} dentro de un repo git: agregado "${linea}" a .git/info/exclude${que === 'sesiones' ? ' (las sesiones guardadas tienen cookies de usuarios reales)' : ''}`)
     }
     const adaptadores = await cargarAdaptadores(cfg, { raiz, base, slot, dirSlot })
     actual = {

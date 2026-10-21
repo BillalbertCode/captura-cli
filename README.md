@@ -15,12 +15,66 @@ También corre pruebas de punta a punta bajo pedido a partir de un escenario en 
 
 ## Instalación
 
-No se publica en npm. Se instala desde GitHub, fijando una etiqueta:
+No se publica en npm. Se instala desde GitHub, fijando una etiqueta de versión.
+
+### Global (recomendado): el comando `captura-cli` queda disponible en cualquier terminal
 
 ```sh
-npx --yes github:billalbertcode/captura-cli#v1.0.0 --help
-npm i -g github:billalbertcode/captura-cli#v1.0.0
+npm i -g --install-links github:BillalbertCode/captura-cli#v1.0.0
+captura-cli --version
+# 1.0.0
 ```
+
+`--install-links` es necesario. Sin él, npm 10 instala un paquete de git en modo global como un enlace a la
+carpeta temporal donde lo clonó; después borra esa carpeta y el comando falla con `Cannot find module …dist/cli.js`.
+Con el flag, npm empaqueta el clon y deja una carpeta real con `dist/`, `LICENSE`, `README.md` y Playwright como
+dependencia. No compila nada ni necesita TypeScript.
+
+- Actualizar: el mismo comando con la etiqueta nueva (`#v1.1.0`).
+- Desinstalar: `npm uninstall -g captura-cli`. Las salidas en `~/.captura-cli/` se conservan.
+- Navegadores: la primera vez, `npx playwright install chromium` (si ya están en la máquina, no hace falta).
+
+### Sin instalar: `npx`
+
+```sh
+npx --yes github:BillalbertCode/captura-cli#v1.0.0 --version
+# 1.0.0
+```
+
+Ejecuta la herramienta desde la caché de npm sin dejar el comando en el PATH; cada llamada vuelve a resolver la
+versión contra GitHub. Sirve para probarla o para fijar una versión en un proyecto, no para el uso diario.
+
+### Respaldo: tarball de la etiqueta
+
+```sh
+npm i -g https://codeload.github.com/BillalbertCode/captura-cli/tar.gz/v1.0.0
+```
+
+No clona con git y no necesita `--install-links`, pero instala el repo completo (`src/`, `test/`, `docs/`), no solo
+`dist/`.
+
+### Estado de la verificación
+
+Probado contra GitHub el 2026-10-21 (npm 10.9.8, Node 22, Windows) sobre el commit de release, con `--prefix` en
+una carpeta temporal:
+
+| Vía | Resultado |
+|---|---|
+| `npm i -g --install-links github:…` | Funciona: carpeta real, Playwright instalado, `--version` → `1.0.0` |
+| `npm i -g github:…` (sin el flag) | Falla: enlace al clon temporal, `MODULE_NOT_FOUND` |
+| `npx --yes github:…` | Funciona: `1.0.0` |
+| `npm i github:…` (local) | Funciona: `1.0.0` |
+| `npm i -g <tarball de codeload>` | Funciona: `1.0.0` |
+
+No verificado: la instalación global sin `--prefix` (el global real del usuario), macOS y Linux.
+
+### Cómo se publica una versión (mantenedores)
+
+1. `npm run release:preparar`: crea la rama `release/v<versión>` = HEAD + `dist/` compilado, sin el script
+   `prepare` y sin tocar `main` ni la carpeta de trabajo.
+2. Etiqueta `v<versión>` sobre ese commit y push de la etiqueta.
+
+Entre versiones, `dist/` no se versiona en `main`; `npm install` en el repo lo compila con `scripts/prepare.mjs`.
 
 ## Uso desde un script
 

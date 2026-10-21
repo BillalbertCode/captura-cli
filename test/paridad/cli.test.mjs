@@ -40,7 +40,3 @@ test('2: escenario inválido, sin abrir el navegador, con el campo exacto a corr
   assert.equal(r.status, 2, r.stdout + r.stderr)
   assert.match(r.stdout + r.stderr, /casos\[0\]\.pasos\[0\]/)
 })
-
-test('manifest.json junto al informe', { skip: falta('manifest') }, () => {
-  assert.fail('pendiente de F4: definir el formato y verificarlo aquí')
-})

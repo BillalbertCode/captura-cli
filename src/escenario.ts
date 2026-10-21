@@ -36,7 +36,7 @@ export type Paso =
   | { cambio: { que: string; revertir?: string; revertido?: boolean } }
   | { api: { metodo: string; ruta: string; cuerpo?: unknown; status?: number } }
   | { receta: string | { id: string; args?: Record<string, unknown> } }
-  | { explorar: true | { max?: number; completo?: boolean } }
+  | { explorar: true | { max?: number; completo?: boolean; errores?: boolean } }
 
 export interface CasoEscenario {
   nombre: string
@@ -75,7 +75,7 @@ export const FORMAS: Record<string, string> = {
   cambio: '{ "cambio": { "que": "Se creó el registro X", "revertir": "borrarlo desde la lista" } }',
   api: '{ "api": { "metodo": "get", "ruta": "/items/1", "status": 200 } }',
   receta: '{ "receta": "abrir-bandeja" }  o  { "receta": { "id": "elegir-fecha", "args": { "dia": 3 } } }',
-  explorar: '{ "explorar": true }',
+  explorar: '{ "explorar": true }  o  { "explorar": { "errores": true } }',
 }
 export const TIPOS_PASO = Object.keys(FORMAS)
 
@@ -218,7 +218,7 @@ function validarPaso(p: unknown, ruta: string, e: Errores): void {
     }
     case 'explorar': {
       if (v === true) break
-      if (!obj(['max', 'completo'])) break
+      if (!obj(['max', 'completo', 'errores'])) break
       break
     }
   }

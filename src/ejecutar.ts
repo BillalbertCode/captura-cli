@@ -5,7 +5,7 @@ import type { Locator, Page } from 'playwright'
 import { patronDe, type Escenario, type Paso, type Selector } from './escenario.js'
 import { esperarHabilitado, esperarToast, abrirSelectHasta } from './esperas.js'
 import { estado } from './estado.js'
-import { diagnostico, esperarExito, esperarTexto, explorar } from './explorar.js'
+import { detectarErrores, diagnostico, esperarExito, esperarTexto, explorar } from './explorar.js'
 import { foto } from './fotos.js'
 import { cambio, caso } from './informe.js'
 import { limpiar, marcar } from './marcas.js'
@@ -128,8 +128,15 @@ export async function ejecutarEscenario(esc: Escenario, o: OpcionesRun = {}): Pr
     const ultimaFoto: { ruta?: string } = {}
     let error = ''
     for (const [j, p] of c.pasos.entries()) {
-      try { await ejecutarPaso(page, p, ultimaFoto) } catch (e) {
-        error = `casos[${i}].pasos[${j}] (${tipoDe(p)}): ${String((e as Error).message || e).split('\n')[0]!.slice(0, 300)}`
+      const e = estado(page)
+      const previos5xx = e.errores5xx.length
+      const donde = `casos[${i}].pasos[${j}] (${tipoDe(p)})`
+      e.pasoEscenario = donde
+      try { await ejecutarPaso(page, p, ultimaFoto) } catch (err) {
+        error = `${donde}: ${String((err as Error).message || err).split('\n')[0]!.slice(0, 300)}`
+        // Si el servidor respondió 5xx durante este paso, probablemente es la causa: se dice en el mismo mensaje.
+        const r5 = e.errores5xx.slice(previos5xx)
+        if (r5.length) error += ` [el servidor respondió ${r5.map((x) => `${x.status} a ${x.metodo} ${x.url}`).slice(0, 3).join('; ')} durante este paso]`
         break
       }
     }
@@ -137,6 +144,8 @@ export async function ejecutarEscenario(esc: Escenario, o: OpcionesRun = {}): Pr
       fallas++
       console.log(`  ${error}`)
       await diagnostico(page, { max: 300 }).catch(() => {})
+      const err = await detectarErrores(page).catch(() => [] as string[])
+      err.forEach((l) => console.log(`  ! ${l}`))
       await limpiar(page).catch(() => {})
     }
     caso(page, {
@@ -147,6 +156,7 @@ export async function ejecutarEscenario(esc: Escenario, o: OpcionesRun = {}): Pr
       ...(ultimaFoto.ruta ? { captura: ultimaFoto.ruta } : {}),
     })
   }
+  delete estado(page).pasoEscenario
   await cerrar(esc.recetas ?? {})
   console.log(`resultado: ${esc.casos.length - fallas} de ${esc.casos.length} caso(s) OK${fallas ? `, ${fallas} FALLA` : ''}`)
   if (fallas) return CODIGOS.ERROR

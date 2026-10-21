@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import type { Page } from 'playwright'
 import { type AppConfig, type Credenciales, sonFaltantes } from './adaptadores/contrato.js'
 import { ctx, hayContexto } from './contexto.js'
-import { estado, fijarApp } from './estado.js'
+import { estado, fijarApp, registrar5xx } from './estado.js'
 import { slug } from './fotos.js'
 import { type Abierto, type OpcionesAbrir, abrir } from './navegador.js'
 import { listarRecetas } from './recetas.js'
@@ -113,6 +113,8 @@ export async function api(page: Page, metodo: string, ruta: string, cuerpo?: unk
   const url = a.baseUrl + (a.apiBase ?? '') + ruta
   e.ultimoPaso = `api ${metodo.toUpperCase()} ${ruta}`
   const r = await page.request.fetch(url, { method: metodo.toUpperCase(), headers, ...(cuerpo !== undefined ? { data: cuerpo } : {}) })
+  // page.request no pasa por los eventos de la página: el 5xx se anota aquí.
+  if (r.status() >= 500) registrar5xx(page, metodo.toUpperCase(), url, r.status())
   const texto = (await r.text()).slice(0, 500)
   if ((r.status() === 401 || r.status() === 403) && !a.cookieSesion && (await page.context().cookies(a.baseUrl)).length === 0) {
     throw new Error(`api(): ${r.status()} y el navegador no tiene ninguna cookie de ${new URL(a.baseUrl).origin} (¿terminó el login?). Si la app pasa el token en una cabecera, declarar apps.<app>.cookieSesion con el nombre de la cookie que lo guarda`)

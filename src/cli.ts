@@ -24,8 +24,9 @@ Uso:
                                            o salidas-base (ruta por defecto para workspaces nuevos)
   captura-cli validar <escenario>          revisa el escenario sin abrir el navegador (sale con 2 si no es válido)
   captura-cli run <escenario> [opciones]   valida y ejecuta el escenario; informe.md, casos.json y capturas
-  captura-cli explorar <ruta> --rol <rol> [--app <app>]
-                                           lista lo interactivo de una pantalla con selectores sugeridos
+  captura-cli explorar <ruta> --rol <rol> [--app <app>] [--errores]
+                                           lista lo interactivo de una pantalla con selectores sugeridos;
+                                           --errores agrega campos inválidos y mensajes de error visibles
   captura-cli recetas [app]                catálogo de recetas con versión y estado
   captura-cli adaptadores verificar        comprueba cada adaptador contra el contrato
   captura-cli --version | --help
@@ -208,7 +209,7 @@ async function explorarCli(ruta: string | undefined, op: Args['op']): Promise<nu
   e.grabar = false // explorar no es un tramo para recetas
   await page.goto(/^https?:/.test(ruta) ? ruta : (e.app?.baseUrl ?? '') + ruta, { waitUntil: 'domcontentloaded' })
   await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {})
-  await explorar(page, { completo: true, max: 80 })
+  await explorar(page, { completo: true, max: 80, errores: !!op['errores'] })
   await cerrar({ ninguna: 'exploración desde el CLI' })
   return CODIGOS.OK
 }

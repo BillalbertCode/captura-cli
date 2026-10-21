@@ -11,8 +11,8 @@ de lo que hizo el agente en el navegador, para que una persona la revise en minu
 También corre pruebas de punta a punta bajo pedido a partir de un escenario en JSON.
 
 > Estado: en construcción hacia la 1.0.0. Ya están el núcleo (API de código, 22 funciones), los adaptadores
-> incluidos, el registro de workspaces, la configuración y los escenarios (`validar`, `run`, `explorar`). Faltan
-> `manifest.json`, los mensajes accionables de F4 y el plugin.
+> incluidos, el registro de workspaces, la configuración, los escenarios (`validar`, `run`, `explorar`),
+> `manifest.json` y los avisos accionables (5xx, validaciones silenciosas). Faltan el plugin y la medición de tokens.
 
 ## Instalación
 

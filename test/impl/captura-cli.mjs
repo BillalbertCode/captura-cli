@@ -30,6 +30,6 @@ export default {
     })
     if (r.status !== 0) throw new Error(`no se pudo registrar el workspace de prueba: ${r.stdout}${r.stderr}`)
   },
-  capacidades: ['canal', 'workspace', 'escenario', 'slot-por-puertos', 'api-sin-cookie', 'pagina-colgada'],
+  capacidades: ['canal', 'workspace', 'escenario', 'manifest', 'slot-por-puertos', 'api-sin-cookie', 'pagina-colgada'],
   defectos: [],
 }

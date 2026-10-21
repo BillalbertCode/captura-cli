@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import * as pw from 'playwright'
 import type { Browser, Page } from 'playwright'
 import { ctx } from './contexto.js'
-import { type Declaracion, crearEstado, estado } from './estado.js'
+import { type Declaracion, crearEstado, estado, pasoActual, registrar5xx } from './estado.js'
 import { grabarAcciones } from './grabacion.js'
 import { escribirInforme } from './informe.js'
 import { cerrarRecetas } from './recetas.js'
@@ -63,16 +63,19 @@ export async function abrir({ ticket, browser = 'chromium', headless = true, vie
   const id = c.adaptadores.identificador.carpeta(ticket)
   const base = join(c.rutas.salidas, id, subcarpeta)
   crearEstado(page, {
-    id, dir: base, base, casos: [], cambios: [], fotos: [], marcas: [], grabar: true, acciones: [], tramos: [], recetasUsadas: [], ultimoPaso: '',
+    id, dir: base, base, casos: [], cambios: [], fotos: [], marcas: [], grabar: true, acciones: [], tramos: [], recetasUsadas: [], ultimoPaso: '', errores5xx: [],
   })
   page.on('crash', () => {
-    colgada = mensajeColgada(page.url(), estado(page).ultimoPaso)
+    colgada = mensajeColgada(page.url(), pasoActual(page))
     salir(colgada, CODIGOS.PAGINA_COLGADA)
   })
+  page.on('response', (r) => { if (r.status() >= 500) registrar5xx(page, r.request().method(), r.url(), r.status()) })
   mkdirSync(base, { recursive: true })
   await grabarAcciones(contexto, page)
   const cerrar = async (declaracion?: Declaracion): Promise<void> => {
     try { await cerrarRecetas(page, declaracion) } catch (e) { console.error(`AVISO: no se pudo revisar las recetas: ${(e as Error).message}`) }
+    const n5 = estado(page).errores5xx.length
+    if (n5) console.error(`AVISO_5XX: ${n5} respuesta(s) 5xx del servidor en esta corrida (detalle en informe.md y manifest.json)`)
     escribirInforme(page)
     try { await c.adaptadores.publicacion.publicar(base, id) } catch (e) { console.error(`AVISO: publicación: ${(e as Error).message}`) }
     anotarUso({ evento: 'cerrar', id, casos: estado(page).casos.length, fotos: estado(page).fotos.length })

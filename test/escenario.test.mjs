@@ -174,6 +174,55 @@ test('run: --id, --out y --viewport mandan sobre el escenario y el config', asyn
   assert.equal((await correr(['run', f, '--viewport', '800por600'], 30000)).code, 1)
 })
 
+test('F4: un 5xx del servidor se avisa con URL, status y paso, entra al mensaje de la falla, al informe y al manifest', async () => {
+  const f = escribir('5xx.json', {
+    version: 1, id: 'PRUEBA-5XX', rol: 'zz', recetas: { ninguna: 'prueba' },
+    casos: [{ nombre: 'reportes', pasos: [{ ir: '/roto' }, { esperar: { texto: 'Datos listos', ms: 2000 } }] }],
+  })
+  const r = await correr(['run', f, '--sin-sesion'])
+  assert.equal(r.code, 1, r.out + r.err)
+  // La página pide los datos 300 ms después de cargar: el 503 llega mientras se espera el texto (pasos[1]).
+  assert.match(r.err, /^AVISO_5XX: el servidor respondió 503 a GET http:\/\/localhost:\d+\/api\/falla durante casos\[0\]\.pasos\[1\] \(esperar\); es un error de la app o de su entorno/m)
+  assert.match(r.err, /^AVISO_5XX: 1 respuesta\(s\) 5xx del servidor en esta corrida/m)
+  assert.match(r.out, /^ {2}casos\[0\]\.pasos\[1\] \(esperar\): .+ \[el servidor respondió 503 a GET http:\/\/localhost:\d+\/api\/falla durante este paso\]$/m)
+  const informe = r.out.match(/^informe: (.+informe\.md)/m)[1]
+  assert.match(readFileSync(informe, 'utf8'), /## Errores del servidor \(última corrida\)[\s\S]*\| 503 \| GET http:\/\/localhost:\d+\/api\/falla \| casos\[0\]\.pasos\[1\] \(esperar\) \|/)
+  const m = JSON.parse(readFileSync(join(informe, '..', 'manifest.json'), 'utf8'))
+  assert.equal(m.resumen.errores5xx, 1)
+  assert.equal(m.errores5xx[0].status, 503)
+})
+
+test('F4: el 5xx que ocurre en el paso que falla se cita en el mismo mensaje', async () => {
+  const f = escribir('5xx-paso.json', {
+    version: 1, id: 'PRUEBA-5XX2', rol: 'zz', recetas: { ninguna: 'prueba' },
+    casos: [{ nombre: 'reportes', pasos: [{ api: { metodo: 'get', ruta: '/falla', status: 200 } }] }],
+  })
+  const r = await correr(['run', f, '--sin-sesion'])
+  assert.equal(r.code, 1, r.out + r.err)
+  assert.match(r.out, /casos\[0\]\.pasos\[0\] \(api\): api GET \/falla: se esperaba 200 y respondió 503 .*\[el servidor respondió 503 a GET http:\/\/localhost:\d+\/api\/falla durante este paso\]/)
+})
+
+test('F4: explorar con errores muestra la validación silenciosa (campo inválido y mensaje), también al fallar un paso', async () => {
+  const f = escribir('errores.json', {
+    version: 1, id: 'PRUEBA-ERR', rol: 'zz', recetas: { ninguna: 'prueba' },
+    casos: [
+      { nombre: 'rif corto', pasos: [{ ir: '/form2' }, { llenar: { en: { etiqueta: 'RIF' }, valor: '12345678' } }, { click: { en: { rol: 'button', nombre: 'Consultar' } } }, { explorar: { errores: true } }] },
+      { nombre: 'consulta que no llega', pasos: [{ click: { en: { rol: 'button', nombre: 'Consultar' } } }, { esperarExito: { texto: 'Consultado', ms: 1000 } }] },
+    ],
+  })
+  const r = await correr(['run', f, '--sin-sesion'])
+  assert.equal(r.code, 1, r.out + r.err)
+  assert.match(r.out, /^errores: 2$/m)
+  assert.ok(r.out.includes('  ! campo "RIF" (patrón ^[0-9]{9}$): 9 dígitos'), r.out)
+  assert.ok(r.out.includes('  ! mensaje: "El RIF debe tener 9 dígitos"'), r.out)
+  // Al fallar el segundo caso, los errores visibles salen junto al diagnóstico.
+  const tras = r.out.split('casos[1].pasos[1] (esperarExito)')[1] ?? ''
+  assert.ok(tras.includes('  ! campo "RIF"'), r.out)
+  const sinErrores = await correr(['explorar', '/form2', '--rol', 'zz', '--errores', '--sin-sesion'])
+  assert.equal(sinErrores.code, 0, sinErrores.err)
+  assert.match(sinErrores.out, /^errores: ninguno visible$/m)
+})
+
 test('explorar (CLI): lista lo interactivo de la ruta con selectores, sin dejar recetas candidatas', async () => {
   const r = await correr(['explorar', '/bandeja', '--rol', 'zz', '--sin-sesion'])
   assert.equal(r.code, 0, r.out + r.err)

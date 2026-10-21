@@ -36,8 +36,39 @@ export interface Estado {
   app?: AppConfig
   appNombre?: string
   explorado?: { ruta: string; lineas: Set<string> }
-  /** Última acción, para el mensaje de PAGINA_COLGADA. */
+  /** Última acción, para el mensaje de PAGINA_COLGADA y los avisos de 5xx. */
   ultimoPaso: string
+  /** Paso del escenario en curso (`casos[i].pasos[j] (tipo)`): manda sobre ultimoPaso en los avisos. */
+  pasoEscenario?: string
+  /** Respuestas 5xx del servidor durante la corrida (para el aviso, el informe y el manifest). */
+  errores5xx: Error5xx[]
+}
+
+export interface Error5xx { metodo: string; url: string; status: number; paso: string }
+
+const avisados5xx = new WeakMap<Page, Set<string>>()
+
+/** Dónde estaba la corrida, para los mensajes: el paso del escenario o la última acción de la API. */
+export const pasoActual = (page: Page): string => {
+  const e = estado(page)
+  return e.pasoEscenario || e.ultimoPaso || 'abrir la página'
+}
+
+/**
+ * Una respuesta 5xx del servidor de la app (p. ej. la base sin conexiones): se anota y se avisa con URL, status y
+ * paso, una vez por petición y status, para no confundirla con un selector roto. No hace fallar nada por sí sola.
+ */
+export function registrar5xx(page: Page, metodo: string, urlCompleta: string, status: number): void {
+  const e = estado(page)
+  const url = urlCompleta.split('?')[0] ?? urlCompleta
+  const paso = pasoActual(page)
+  e.errores5xx.push({ metodo, url, status, paso })
+  const vistos = avisados5xx.get(page) ?? new Set<string>()
+  avisados5xx.set(page, vistos)
+  const clave = `${metodo} ${url} ${status}`
+  if (vistos.has(clave) || vistos.size >= 10) return
+  vistos.add(clave)
+  console.error(`AVISO_5XX: el servidor respondió ${status} a ${metodo} ${url} durante ${paso}; es un error de la app o de su entorno (ver su log), no de la herramienta`)
 }
 
 const estados = new WeakMap<Page, Estado>()

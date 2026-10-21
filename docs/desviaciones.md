@@ -19,6 +19,17 @@ exige el comportamiento nuevo. Un caso «conocido, no corregido» se mantiene ig
 | Workspace sin registrar | No aplica | Código **6** `WORKSPACE_NUEVO`, con las preguntas para el agente | Nuevo |
 | Rutas en los mensajes de recetas | `captura.recetas/<app>.mjs` | La ruta real de la carpeta de recetas del workspace | La carpeta ya no es fija |
 
+## Agregados (no cambian nada de lo anterior)
+
+| Qué | Dónde |
+|---|---|
+| `manifest.json` junto a `informe.md`: resumen, casos, capturas con `sha256` y ruta en `publicar/`, cambios, recetas, 5xx | Cierre (`cerrar()` y `run`) |
+| `AVISO_5XX: el servidor respondió <status> a <MÉTODO> <url> durante <paso>; …` en stderr (una vez por petición) y la sección «Errores del servidor» en el informe | Cualquier respuesta 5xx de la página o de `api()` |
+| En `run`, si un paso falla y hubo un 5xx durante ese paso, el mensaje de la falla lo cita | `captura-cli run` |
+| `explorar(page, { errores: true })`, el paso `{ "explorar": { "errores": true } }` y `captura-cli explorar … --errores`: campos inválidos (`aria-invalid` o validación nativa, con su mensaje) y mensajes de error visibles | Validaciones silenciosas |
+| En `run`, al fallar un paso, los errores visibles se imprimen junto al `diagnostico` | `captura-cli run` |
+| Escenarios en JSON, `captura-cli validar`, `run`, `explorar` | F3 |
+
 ## Conocidas, no corregidas
 
 | Qué | Comportamiento (igual en las dos) |

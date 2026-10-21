@@ -48,8 +48,13 @@ captura-cli explorar /bandeja --rol supervisor  # para hallar selectores antes d
 | `recetas` | Lo mismo que `cerrar()`: `{ "creadas": ["id"] }` o `{ "ninguna": "motivo" }`. Sin esto, si hubo pasos propios, sale con 5 |
 | `casos` | Cada caso va al informe: **OK** si todos sus pasos se cumplen; **FALLA** con el paso y el error si uno falla |
 
-Si un caso falla, el motor imprime el paso exacto (`casos[0].pasos[3] (click): …`) y un `diagnostico`, quita las
-marcas y sigue con el caso siguiente.
+Si un caso falla, el motor imprime el paso exacto (`casos[0].pasos[3] (click): …`), un `diagnostico` y los errores
+visibles de la pantalla (campos inválidos, mensajes de error); quita las marcas y sigue con el caso siguiente. Si
+durante ese paso el servidor respondió 5xx, el mensaje lo dice: `[el servidor respondió 503 a GET …/api/x durante
+este paso]`. Así un problema del entorno no se confunde con un selector roto.
+
+Al cerrar quedan `informe.md` para personas y `manifest.json` para máquinas: resumen, casos, capturas con su
+`sha256` y su ruta en `publicar/`, cambios, recetas y respuestas 5xx.
 
 ## Pasos
 
@@ -70,7 +75,7 @@ marcas y sigue con el caso siguiente.
 | `cambio` | `{ "que", "revertir", "revertido" }` | `cambio` |
 | `api` | `{ "metodo", "ruta", "cuerpo", "status" }` | `api`; con `status`, falla si la respuesta es otra |
 | `receta` | `"id"` o `{ "id", "args" }` | `receta` |
-| `explorar` | `true` o `{ "max", "completo" }` | `explorar` |
+| `explorar` | `true` o `{ "max", "completo", "errores" }` | `explorar`; con `errores`, también los campos inválidos y los mensajes de error visibles |
 
 Un texto escrito como `"/patron/i"` es una expresión regular; cualquier otro, literal.
 

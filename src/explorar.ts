@@ -20,11 +20,45 @@ export async function diagnostico(page: Page, { max = 400 }: { max?: number } = 
 
 interface Item { rol: string; nombre: string; testid: string; ph: string; nm: string; off: boolean }
 
+// Validaciones silenciosas: campos inválidos (aria-invalid o la validación nativa) y mensajes de error visibles.
+// Sirve cuando "Siguiente" o "Consultar" no hace nada y no hay ninguna petición: casi siempre es un campo inválido.
+export async function detectarErrores(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const visible = (el: Element): boolean => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
+    const limpio = (t: string | null | undefined): string => (t || '').replace(/\s+/g, ' ').trim().slice(0, 160)
+    const porIds = (ids: string | null): string => (ids || '').split(/\s+/).map((i) => limpio(document.getElementById(i)?.textContent)).filter(Boolean).join(' · ')
+    const out: string[] = []
+    const vistos = new Set<string>()
+    const campos = [...document.querySelectorAll('input,select,textarea,[role=textbox],[role=combobox],[role=checkbox],[role=radio]')]
+    for (const el of campos) {
+      if (!visible(el)) continue
+      const f = el as HTMLInputElement
+      const aria = el.getAttribute('aria-invalid') === 'true'
+      const nativo = !!f.validity && !f.validity.valid
+      if (!aria && !nativo) continue
+      const nombre = limpio(f.labels?.[0]?.innerText || el.getAttribute('aria-label') || f.placeholder || f.name || el.id || el.tagName.toLowerCase())
+      const msg = porIds(el.getAttribute('aria-errormessage')) || porIds(el.getAttribute('aria-describedby')) || limpio(f.validationMessage) || (aria ? 'aria-invalid' : 'no cumple la validación')
+      vistos.add(msg)
+      out.push(`campo "${nombre}"${f.pattern ? ` (patrón ${f.pattern})` : ''}: ${msg}`)
+    }
+    const avisos = [...document.querySelectorAll('[role=alert],[aria-live=assertive],[class*=error i],[class*=invalid i],[class*=danger i]')]
+    for (const el of avisos) {
+      if (!visible(el) || out.length >= 20) continue
+      const t = limpio((el as HTMLElement).innerText)
+      if (!t || t.length > 160 || vistos.has(t)) continue
+      vistos.add(t)
+      out.push(`mensaje: "${t}"`)
+    }
+    return out
+  })
+}
+
 // Exploración barata para hallar selectores: lista compacta de lo interactivo y los títulos de la pantalla, con un
 // selector sugerido por elemento. La primera llamada en una ruta imprime todo (tope `max`); las siguientes en la
 // misma ruta imprimen SOLO lo que apareció (+) o desapareció (-) desde la llamada anterior, así un reintento no
 // repite el volcado. `completo: true` fuerza el listado entero.
-export async function explorar(page: Page, { max = 40, completo = false }: { max?: number; completo?: boolean } = {}): Promise<{ titulos: string[]; nuevas: string[]; quitadas: string[] }> {
+// `errores: true` agrega los campos inválidos y los mensajes de error visibles (ver detectarErrores).
+export async function explorar(page: Page, { max = 40, completo = false, errores = false }: { max?: number; completo?: boolean; errores?: boolean } = {}): Promise<{ titulos: string[]; nuevas: string[]; quitadas: string[]; errores?: string[] }> {
   const info = await page.evaluate(() => {
     const visible = (el: Element): boolean => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
     const rol = (el: Element): string => el.getAttribute('role') || ({ BUTTON: 'button', A: 'link', SELECT: 'combobox', TEXTAREA: 'textbox' } as Record<string, string>)[el.tagName] || (el.tagName === 'INPUT' ? ({ checkbox: 'checkbox', radio: 'radio', submit: 'button', button: 'button' } as Record<string, string>)[(el as HTMLInputElement).type] || 'textbox' : 'elemento')
@@ -51,7 +85,11 @@ export async function explorar(page: Page, { max = 40, completo = false }: { max
   nuevas.slice(0, max).forEach((l) => console.log(`  ${mismaRuta ? '+ ' : ''}${l}`))
   if (nuevas.length > max) console.log(`  … +${nuevas.length - max} más (usar max o completo)`)
   quitadas.slice(0, max).forEach((l) => console.log(`  - ${l}`))
-  return { titulos: info.titulos, nuevas, quitadas }
+  if (!errores) return { titulos: info.titulos, nuevas, quitadas }
+  const err = await detectarErrores(page)
+  console.log(err.length ? `errores: ${err.length}` : 'errores: ninguno visible')
+  err.forEach((l) => console.log(`  ! ${l}`))
+  return { titulos: info.titulos, nuevas, quitadas, errores: err }
 }
 
 // Éxito estricto: espera el texto de confirmación DENTRO de un ámbito (por defecto avisos/diálogos: role status,

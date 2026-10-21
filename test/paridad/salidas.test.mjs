@@ -4,7 +4,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
-import { correr, esPng, leerJson, pixeles, impl } from './lib.mjs'
+import { createHash } from 'node:crypto'
+import { correr, esPng, falta, leerJson, pixeles, impl } from './lib.mjs'
 
 const ID = impl.id(1)
 let r
@@ -60,6 +61,30 @@ test('informe.md: encabezado, tablas y recetas', () => {
 test('publicar/: copia de las capturas registradas', () => {
   const pub = join(dirname(r.informe), 'publicar', basename(r.capturas[0]))
   assert.ok(esPng(pub), pub)
+})
+
+test('manifest.json: lo mismo que informe.md para máquinas, con sha256 de cada captura', { skip: falta('manifest') }, () => {
+  const dir = dirname(r.informe)
+  const m = leerJson(join(dir, 'manifest.json'))
+  const casos = leerJson(join(dir, 'casos.json'))
+  assert.equal(m.version, 1)
+  assert.equal(m.herramienta.nombre, 'captura-cli')
+  assert.equal(m.id, ID)
+  assert.match(m.actualizado, /^\d{4}-\d{2}-\d{2}T/)
+  assert.deepEqual(m.resumen, {
+    casos: casos.casos.length, ok: casos.casos.filter((c) => c.ok).length, falla: casos.casos.filter((c) => !c.ok).length,
+    capturas: casos.fotos.length, sinRegistrar: 0, recetasPendientes: casos.recetas.pendiente, errores5xx: 0,
+  })
+  assert.deepEqual(m.casos.map((c) => c.nombre), casos.casos.map((c) => c.nombre))
+  const nombre = basename(r.capturas[0])
+  const cap = m.capturas.find((c) => c.archivo === `./${nombre}`)
+  assert.ok(cap, 'la captura de esta corrida está en el manifest')
+  assert.equal(cap.publicar, `publicar/${nombre}`)
+  assert.equal(cap.leyenda, 'La bandeja con los filtros llenos')
+  assert.equal(cap.marcada, true)
+  assert.equal(cap.sha256, createHash('sha256').update(readFileSync(r.capturas[0])).digest('hex'))
+  assert.ok(esPng(join(dir, cap.publicar)))
+  assert.deepEqual(m.archivos, { informe: 'informe.md', casos: 'casos.json', publicar: 'publicar/', recetasCandidatas: 'recetas-candidatas.md' })
 })
 
 test('recetas-candidatas.md: tramo con selectores pegables y clave enmascarada', () => {

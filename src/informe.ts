@@ -5,8 +5,10 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Page } from 'playwright'
-import { type Cambio, type Caso, type Foto, estado } from './estado.js'
+import { createHash } from 'node:crypto'
+import { type Cambio, type Caso, type Error5xx, type Foto, estado } from './estado.js'
 import { slug } from './fotos.js'
+import { VERSION } from './version.js'
 
 /** Registra un caso para informe.md: { nombre, esperado, observado, ok, captura? } */
 export function caso(page: Page, c: Caso): void {
@@ -64,6 +66,43 @@ interface Acumulado {
   cambios: Cambio[]
   fotos: Foto[]
   recetas?: { usadas: string[]; creadas: string[]; ninguna: string[]; pendiente: boolean }
+  /** Respuestas 5xx de la última corrida (no se acumulan: describen el estado del servidor de esa corrida). */
+  errores5xx?: Error5xx[]
+}
+
+// manifest.json: lo mismo que informe.md, para máquinas (un adaptador de publicación, un hook, otro agente).
+// Rutas relativas a la carpeta del id; sha256 de cada PNG para comprobar lo que se sube.
+function escribirManifest(base: string, id: string, acum: Acumulado, sueltas: string[]): void {
+  const hash = (rel: string): string | null => {
+    const f = join(base, rel)
+    return existsSync(f) ? createHash('sha256').update(readFileSync(f)).digest('hex') : null
+  }
+  const publicado = (rel: string): string => `publicar/${rel.replace(/^\.\//, '').replaceAll('/', '__')}`
+  const ok = acum.casos.filter((c) => c.ok).length
+  const m = {
+    version: 1,
+    herramienta: { nombre: 'captura-cli', version: VERSION },
+    id,
+    actualizado: new Date().toISOString(),
+    resumen: {
+      casos: acum.casos.length, ok, falla: acum.casos.length - ok, capturas: acum.fotos.length,
+      sinRegistrar: sueltas.length, recetasPendientes: acum.recetas?.pendiente ?? false, errores5xx: acum.errores5xx?.length ?? 0,
+    },
+    casos: acum.casos.map((c) => ({ nombre: c.nombre, esperado: c.esperado, observado: c.observado, ok: c.ok, captura: c.captura || null })),
+    capturas: acum.fotos.map((f) => ({
+      archivo: f.ruta, publicar: publicado(f.ruta), paso: f.paso, leyenda: f.leyenda, marcada: f.marcada,
+      sinMarca: f.sinMarca || null, marcas: f.marcas, sha256: hash(f.ruta),
+    })),
+    cambios: acum.cambios,
+    recetas: acum.recetas ?? null,
+    errores5xx: acum.errores5xx ?? [],
+    sinRegistrar: sueltas,
+    archivos: {
+      informe: 'informe.md', casos: 'casos.json', publicar: acum.fotos.length ? 'publicar/' : null,
+      recetasCandidatas: existsSync(join(base, 'recetas-candidatas.md')) ? 'recetas-candidatas.md' : null,
+    },
+  }
+  writeFileSync(join(base, 'manifest.json'), JSON.stringify(m, null, 2) + '\n')
 }
 
 export function escribirInforme(page: Page): void {
@@ -102,6 +141,7 @@ export function escribirInforme(page: Page): void {
     const u = (a: string[] | undefined, b: string[]): string[] => [...new Set([...(a || []), ...b])]
     acum.recetas = { usadas: u(acum.recetas?.usadas, rr.usadas), creadas: u(acum.recetas?.creadas, rr.creadas), ninguna: u(acum.recetas?.ninguna, rr.ninguna ? [rr.ninguna] : []), pendiente: rr.pendiente }
   }
+  acum.errores5xx = e.errores5xx
   if (!acum.casos.length && !acum.cambios.length && !acum.fotos.length) return
   writeFileSync(json, JSON.stringify(acum, null, 2))
   const L = [`# ${e.id}: verificación en navegador`, '', `Actualizado: ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`, '']
@@ -127,6 +167,13 @@ export function escribirInforme(page: Page): void {
     L.push('')
   }
   if (sueltas.length) L.push('## Capturas sin registrar (no se suben)', '', ...sueltas.map((s) => `- ${s}`), '')
+  if (e.errores5xx.length) {
+    L.push('## Errores del servidor (última corrida)', '', 'La app respondió 5xx: es un problema de la app o de su entorno, no de la prueba.', '',
+      '| Status | Petición | Durante |', '|---|---|---|')
+    for (const x of e.errores5xx) L.push(`| ${x.status} | ${x.metodo} ${x.url} | ${x.paso} |`)
+    L.push('')
+  }
   writeFileSync(join(base, 'informe.md'), L.join('\n'))
+  escribirManifest(base, e.id, acum, sueltas)
   console.log(`informe: ${join(base, 'informe.md')} (${acum.casos.length} casos, ${acum.fotos.length} capturas)`)
 }

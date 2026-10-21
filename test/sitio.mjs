@@ -31,9 +31,20 @@ export function sitio({ puerto = 0 } = {}) {
       <div id="estado"></div>
       <script>document.getElementById('enviar').addEventListener('click',()=>{setTimeout(()=>{const e=document.getElementById('estado');
         e.setAttribute('role','status');e.textContent='Enviado con éxito: '+document.getElementById('nombre').value},200)})</script>`,
+    // Validación silenciosa: con un RIF inválido "Consultar" no hace ninguna petición; solo marca el campo.
+    '/form2': `${guardia}<h1>Consulta</h1><label>RIF <input id="rif" pattern="^[0-9]{9}$" aria-describedby="rif-ayuda"></label>
+      <span id="rif-ayuda">9 dígitos</span><button id="consultar">Consultar</button><p id="msg" class="campo-error"></p>
+      <script>document.getElementById('consultar').addEventListener('click',()=>{const r=document.getElementById('rif');
+        if(!r.checkValidity()){r.setAttribute('aria-invalid','true');document.getElementById('msg').textContent='El RIF debe tener 9 dígitos'}})</script>`,
+    // El backend de la app falla (503): la pantalla se queda cargando.
+    '/roto': `${guardia}<h1>Reportes</h1><p id="estado">Cargando datos…</p><script>setTimeout(()=>fetch('/api/falla'),300)</script>`,
   }
   const server = http.createServer((q, r) => {
     const ruta = q.url.split('?')[0]
+    if (ruta === '/api/falla') {
+      r.statusCode = 503
+      return r.end('{"error":"ya tenemos demasiados clientes"}')
+    }
     if (ruta.startsWith('/api/')) {
       r.setHeader('content-type', 'application/json')
       let cuerpo = ''

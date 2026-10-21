@@ -9,6 +9,11 @@ import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..')
+// TypeScript 7 no exporta bin/tsc: se toma del campo bin de su package.json.
+const rutaTsc = () => {
+  const pj = createRequire(join(raiz, 'package.json')).resolve('typescript/package.json')
+  return join(dirname(pj), JSON.parse(readFileSync(pj, 'utf8')).bin.tsc)
+}
 const { version } = JSON.parse(readFileSync(join(raiz, 'package.json'), 'utf8'))
 const rama = `release/v${version}`
 
@@ -25,7 +30,7 @@ const base = git(['rev-parse', 'HEAD'])
 // 1) Compilar en una carpeta nueva y vacía (dist/ del repo no se toca).
 const salida = join(raiz, 'test', '.tmp', `release-${Date.now()}`, 'dist')
 mkdirSync(salida, { recursive: true })
-const tsc = createRequire(join(raiz, 'package.json')).resolve('typescript/bin/tsc')
+const tsc = rutaTsc()
 const c = spawnSync(process.execPath, [tsc, '-p', join(raiz, 'tsconfig.json'), '--outDir', salida], { stdio: ['ignore', 'inherit', 'inherit'], timeout: 300000 })
 if (c.status !== 0) fallar('tsc falló')
 const archivos = []

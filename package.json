@@ -1,0 +1,45 @@
+{
+  "name": "captura-cli",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Evidencia de lo que hizo un agente de IA en el navegador (capturas con leyenda y marca roja, informe, manifest) y pruebas de punta a punta bajo pedido.",
+  "license": "MIT",
+  "author": "billalbertcode",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/billalbertcode/captura-cli.git"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "captura-cli": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test --test-concurrency=1 \"test/**/*.test.mjs\"",
+    "test:paridad": "node --test --test-concurrency=1 \"test/paridad/*.test.mjs\""
+  },
+  "dependencies": {
+    "playwright": "1.61.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.1",
+    "typescript": "7.0.2"
+  }
+}

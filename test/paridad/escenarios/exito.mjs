@@ -1,0 +1,26 @@
+// Flujo completo: login con campos, receta, pasos propios grabados, marca, foto, api, casos y cierre.
+// Variante (argv[2]): "ninguna" (default, código 0) | "sin-declarar" (código 5) | "creadas-falsas" (código 5) | "creadas" (0)
+import { C, id, conCredenciales, sitio, registrarApp } from './_comun.mjs'
+const variante = process.argv[2] || 'ninguna'
+const s = await sitio()
+registrarApp(s.url)
+conCredenciales('zz')
+const { page, cerrar } = await C.sesion('zz', { ticket: id(1), app: 'zz', reutilizar: false })
+const u = await page.evaluate(() => document.cookie.match(/u=([^;]*)/)?.[1] || '')
+C.caso(page, { nombre: 'login con campos numero/clave', esperado: '12345678', observado: u, ok: u === '12345678' })
+await C.receta(page, 'abrir-bandeja')
+await page.getByPlaceholder('Documento').fill('12345678')
+await page.locator('#tipo').selectOption('Dos')
+await page.getByPlaceholder('Clave').fill('secreto')
+await page.getByRole('button', { name: 'Buscar' }).click()
+await C.marcar(page, page.getByRole('heading', { name: 'Bandeja' }), 'Bandeja con filtros')
+const f = await C.foto(page, 'Bandeja llena', { leyenda: 'La bandeja con los filtros llenos' })
+await C.limpiar(page)
+const r = await C.api(page, 'post', '/eco', { a: 1 })
+C.caso(page, { nombre: 'api con la sesión', esperado: '200', observado: String(r.status), ok: r.status === 200, captura: f })
+C.cambio(page, { que: 'nada real: dato de prueba', revertir: 'no aplica', revertido: true })
+if (variante === 'ninguna') await cerrar({ ninguna: 'tramo de prueba, no se repite' })
+else if (variante === 'creadas-falsas') await cerrar({ creadas: ['no-existe'] })
+else if (variante === 'creadas') { C.declararRecetas(page, { creadas: ['abrir-bandeja'] }); await cerrar() }
+else await cerrar()
+await s.cerrar()

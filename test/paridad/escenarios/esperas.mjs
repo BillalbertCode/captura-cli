@@ -1,0 +1,15 @@
+// Esperas por estado: esperarTexto, esperarHabilitado, abrirSelectHasta (la opción aparece en la segunda apertura).
+import { C, id, conCredenciales, sitio, registrarApp } from './_comun.mjs'
+const s = await sitio()
+registrarApp(s.url)
+conCredenciales('zz')
+const { page, cerrar } = await C.sesion('zz', { ticket: id(10), app: 'zz', reutilizar: false })
+await page.goto(s.url + '/esperas')
+await C.esperarTexto(page, 'Esperas')
+await C.esperarHabilitado(page.locator('#lento'), 5000)
+console.log(`PRUEBA habilitado=${await page.locator('#lento').isEnabled()}`)
+const op = await C.abrirSelectHasta(page.locator('#combo'), 'Opción tardía', { intentos: 4, ms: 800 })
+console.log(`PRUEBA opcion=${await op.innerText()}`)
+C.caso(page, { nombre: 'esperas', esperado: 'ok', observado: 'ok', ok: true })
+await cerrar({ ninguna: 'prueba de esperas' })
+await s.cerrar()

@@ -1,0 +1,28 @@
+{
+  "comentario": "Contrato de la API de código del núcleo (contrato público, capa 2). Mismo nombre y misma aridad (Function.length) que la implementación de referencia. 'paso' es alias de 'foto'. El correo (mailpit, urlMailpit) no es del núcleo: va en el adaptador de correo.",
+  "nucleo": {
+    "credenciales": { "tipo": "function", "aridad": 1 },
+    "abrir": { "tipo": "function", "aridad": 1 },
+    "declararRecetas": { "tipo": "function", "aridad": 2 },
+    "apps": { "tipo": "object" },
+    "sesion": { "tipo": "function", "aridad": 2 },
+    "esperarTexto": { "tipo": "function", "aridad": 2 },
+    "foto": { "tipo": "function", "aridad": 2 },
+    "paso": { "tipo": "function", "aridad": 2, "aliasDe": "foto" },
+    "marcar": { "tipo": "function", "aridad": 3 },
+    "limpiar": { "tipo": "function", "aridad": 1 },
+    "api": { "tipo": "function", "aridad": 4 },
+    "diagnostico": { "tipo": "function", "aridad": 1 },
+    "explorar": { "tipo": "function", "aridad": 1 },
+    "esperarExito": { "tipo": "function", "aridad": 2 },
+    "caso": { "tipo": "function", "aridad": 2 },
+    "cambio": { "tipo": "function", "aridad": 2 },
+    "configuracion": { "tipo": "function", "aridad": 2 },
+    "listarRecetas": { "tipo": "function", "aridad": 1 },
+    "receta": { "tipo": "function", "aridad": 2 },
+    "abrirSelectHasta": { "tipo": "function", "aridad": 2 },
+    "esperarHabilitado": { "tipo": "function", "aridad": 1 },
+    "esperarToast": { "tipo": "function", "aridad": 2 }
+  },
+  "fueraDelNucleo": ["mailpit", "urlMailpit"]
+}

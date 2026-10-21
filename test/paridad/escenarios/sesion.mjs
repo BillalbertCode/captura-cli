@@ -1,0 +1,18 @@
+// Sesión guardada: login y guarda; la segunda vez reutiliza; con el sitio reiniciado (otro token) cae a login normal.
+import { C, id, conCredenciales, sitio, registrarApp } from './_comun.mjs'
+conCredenciales('zz')
+let s = await sitio()
+registrarApp(s.url)
+let r = await C.sesion('zz', { ticket: id(2), app: 'zz', reutilizar: false })
+console.log(`PRUEBA url1=${new URL(r.page.url()).pathname}`)
+await r.cerrar()
+r = await C.sesion('zz', { ticket: id(2), app: 'zz' })
+console.log(`PRUEBA url2=${new URL(r.page.url()).pathname}`)
+await r.cerrar()
+await s.cerrar()
+s = await sitio()
+registrarApp(s.url)
+r = await C.sesion('zz', { ticket: id(2), app: 'zz' })
+console.log(`PRUEBA url3=${new URL(r.page.url()).pathname}`)
+await r.cerrar()
+await s.cerrar()

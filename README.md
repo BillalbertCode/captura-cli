@@ -65,8 +65,9 @@ una carpeta temporal:
 | `npx --yes github:…` | Funciona: `1.0.0` |
 | `npm i github:…` (local) | Funciona: `1.0.0` |
 | `npm i -g <tarball de codeload>` | Funciona: `1.0.0` |
+| `npm i -g --install-links github:…#release/v1.0.0` en el global real (nvm4w) | Funciona: `captura-cli` en el PATH, `--version` → `1.0.0`, sale con 6 en una carpeta nueva |
 
-No verificado: la instalación global sin `--prefix` (el global real del usuario), macOS y Linux.
+No verificado: macOS y Linux.
 
 ### Cómo se publica una versión (mantenedores)
 

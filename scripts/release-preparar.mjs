@@ -1,4 +1,5 @@
-// Prepara el commit de release: el commit actual (HEAD) más dist/ compilado, en la rama release/v<versión>.
+// Prepara el commit de release: el commit actual (HEAD) más dist/ compilado y sin script prepare, en la rama
+// release/v<versión>.
 // No toca main, ni la carpeta de trabajo, ni el índice: compila en una carpeta nueva y arma el commit con un índice
 // temporal (git plumbing). No crea etiquetas ni hace push.
 //   npm run release:preparar
@@ -47,11 +48,19 @@ for (const f of archivos) {
   const ruta = 'dist/' + relative(salida, f).split(sep).join('/')
   git(['update-index', '--add', '--cacheinfo', `100644,${sha},${ruta}`], env)
 }
+// package.json sin "prepare": con un script prepare, npm hace un `npm install` interno sobre el clon, y en modo
+// global (-g) ese install enlaza el clon temporal en vez de instalar el paquete (queda un enlace roto). Sin prepare,
+// npm empaqueta el clon tal cual (con dist/) e instala sus dependencias como las de cualquier paquete.
+const pkg = JSON.parse(git(['show', `${base}:package.json`]))
+delete pkg.scripts.prepare
+const r = spawnSync('git', ['hash-object', '-w', '--stdin'], { cwd: raiz, encoding: 'utf8', timeout: 60000, input: JSON.stringify(pkg, null, 2) + '\n' })
+if (r.status !== 0) fallar(`git hash-object package.json: ${r.stderr}`)
+git(['update-index', '--add', '--cacheinfo', `100644,${r.stdout.trim()},package.json`], env)
 const arbol = git(['write-tree'], env)
 rmSync(indice) // solo el archivo de índice temporal que creó este script
 
 // 3) Commit hijo de HEAD en la rama de release (se rehace si ya existía). main no cambia.
-const mensaje = `chore(release): incluye dist/ compilado para v${version}\n\n- Árbol de ${base.slice(0, 7)} más dist/ (${archivos.length} archivos)\n- La instalación desde git no compila: scripts/prepare.mjs ve dist/cli.js y no necesita tsc`
+const mensaje = `chore(release): incluye dist/ compilado para v${version}\n\n- Árbol de ${base.slice(0, 7)} más dist/ (${archivos.length} archivos)\n- package.json sin "prepare": la instalación desde git (también -g) no compila ni\n  corre un npm install interno; empaqueta el clon con dist/ e instala playwright`
 const commit = git(['commit-tree', arbol, '-p', base, '-m', mensaje])
 git(['branch', '-f', rama, commit])
 console.log(`release: ${rama} -> ${commit.slice(0, 7)} (base ${base.slice(0, 7)}, ${archivos.length} archivos en dist/)`)

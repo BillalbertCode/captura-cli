@@ -40,9 +40,10 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepare": "tsc -p tsconfig.json",
+    "prepare": "node scripts/prepare.mjs",
     "test": "npm run build && node --test --test-concurrency=1 \"test/*.test.mjs\" \"test/paridad/*.test.mjs\"",
-    "test:paridad": "node --test --test-concurrency=1 \"test/paridad/*.test.mjs\""
+    "test:paridad": "node --test --test-concurrency=1 \"test/paridad/*.test.mjs\"",
+    "release:preparar": "node scripts/release-preparar.mjs"
   },
   "dependencies": {
     "playwright": "1.61.0"

@@ -34,6 +34,9 @@ mirando imágenes**. Un PNG se abre solo si un caso falla o para validar dónde 
 9. **Recetas:** lo ya probado se reutiliza; al cerrar se declaran las creadas o por qué ninguna (si no, código 5).
 10. **Servicios ajenos no se tocan:** solo se levanta y se para lo del slot propio.
 11. **Las capturas no se commitean** ni se citan en comunicados; para un MR se nombra la ruta o el usuario las adjunta.
+12. **Si el hook de cierre pide evidencia** (el turno tocó la interfaz), dejarla; si de verdad no aplica (el cambio
+    no se ve en pantalla), terminar la respuesta con una línea `SIN_EVIDENCIA: <motivo>`. Nunca usarla para saltarse
+    una verificación que sí corresponde.
 
 ## Flujo
 

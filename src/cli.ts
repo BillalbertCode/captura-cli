@@ -35,6 +35,7 @@ Uso:
                                            entorno, publicacion, correo) en <proyecto>/adaptadores/
   captura-cli entorno levantar <app> [args…] | estado | parar [app]
                                            servicios del slot propio, mediante el adaptador de entorno
+  captura-cli hook cierre | inicio         los usa el plugin de Claude Code (leen el JSON del hook por stdin)
   captura-cli --version | --help
 
   <escenario> es una ruta a un .json o un nombre de la carpeta de escenarios del proyecto.
@@ -260,6 +261,36 @@ async function entornoCli(sub: string | undefined, args: string[]): Promise<numb
   return r.ok ? CODIGOS.OK : CODIGOS.ERROR
 }
 
+// ---------- hooks del plugin ----------
+
+/** La entrada JSON que Claude Code pasa a un hook por stdin, con tope: un hook nunca se queda esperando. */
+function leerEntrada(ms = 5000): Promise<string> {
+  if (process.stdin.isTTY) return Promise.resolve('')
+  return new Promise((ok) => {
+    let s = ''
+    const fin = (): void => { clearTimeout(t); process.stdin.pause(); ok(s) }
+    const t = setTimeout(fin, ms)
+    process.stdin.setEncoding('utf8')
+    process.stdin.on('data', (d: string) => { s += d })
+    process.stdin.on('end', fin)
+    process.stdin.on('error', fin)
+  })
+}
+
+async function hookCli(evento: string | undefined): Promise<number> {
+  if (evento !== 'cierre' && evento !== 'inicio') return salir('hook: cierre | inicio (los llama el plugin de Claude Code)', CODIGOS.ERROR)
+  const { hookCierre, hookInicio } = await import('./hook.js')
+  try {
+    const r = await (evento === 'cierre' ? hookCierre : hookInicio)(await leerEntrada())
+    if (r.salida) console.log(r.salida)
+    return r.codigo
+  } catch (e) {
+    // Un hook roto no debe trabar al agente: se informa y se deja seguir.
+    console.error(`captura-cli hook ${evento}: ${(e as Error).message}`)
+    return CODIGOS.OK
+  }
+}
+
 async function main(): Promise<number> {
   const { pos, op } = parsear(process.argv.slice(2))
   const cmd = pos[0]
@@ -267,6 +298,7 @@ async function main(): Promise<number> {
   if (op['help'] || cmd === 'help' || !cmd) { console.log(AYUDA); return cmd || op['help'] ? 0 : 1 }
   if (cmd === 'init') return init(op)
   if (cmd === 'config' && pos[1]) return cambiarConfig(pos[1], pos[2])
+  if (cmd === 'hook') return hookCli(pos[1])
   // Opciones que equivalen a variables de entorno: se aplican antes de resolver el contexto.
   for (const [o, v] of [['config', 'CAPTURA_CONFIG'], ['out', 'CAPTURA_OUT'], ['slot', 'CAPTURA_SLOT'], ['canal', 'CAPTURA_CANAL']] as const) {
     const x = texto(op[o])

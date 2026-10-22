@@ -1,0 +1,19 @@
+{
+  "description": "Inicio: avisa si captura-cli está disponible y el estado del workspace. Cierre: si el proyecto lo activa (\"evidencia\": { \"hook\": true }), pide evidencia cuando el turno tocó la interfaz sin dejarla.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs\" inicio", "timeout": 30 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs\" cierre", "timeout": 45 }
+        ]
+      }
+    ]
+  }
+}

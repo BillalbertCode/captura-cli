@@ -12,7 +12,8 @@ También corre pruebas de punta a punta bajo pedido a partir de un escenario en 
 
 > Estado: en construcción hacia la 1.0.0. Ya están el núcleo (API de código, 22 funciones), los adaptadores
 > incluidos, el registro de workspaces, la configuración, los escenarios (`validar`, `run`, `explorar`),
-> `manifest.json` y los avisos accionables (5xx, validaciones silenciosas). Faltan el plugin y la medición de tokens.
+> `manifest.json`, los avisos accionables (5xx, validaciones silenciosas) y el plugin de Claude Code. Falta la
+> medición de tokens (F7).
 
 ## Instalación
 
@@ -96,7 +97,26 @@ await cerrar({ ninguna: 'verificación puntual' })
 - Correo: `import { mailpit } from 'captura-cli/correo'`.
 - Lo propio de un proyecto (credenciales, formato de id, servicios, publicación, correo) entra por adaptadores:
   [docs/adaptadores.md](docs/adaptadores.md) (`captura-cli adaptador nuevo <tipo>` crea una plantilla).
-- Instrucciones para el agente (skill corta con referencias): [skill/captura/SKILL.md](skill/captura/SKILL.md).
+- Instrucciones para el agente (skill corta con referencias): [plugin/skills/captura/SKILL.md](plugin/skills/captura/SKILL.md).
+
+## Plugin de Claude Code
+
+El plugin `captura` trae la skill y dos hooks. Necesita el comando `captura-cli` instalado en global (ver arriba).
+
+```sh
+claude plugin marketplace add BillalbertCode/captura-cli
+claude plugin install captura@captura-cli
+```
+
+En una sesión (Claude Code 2.1.275 o posterior): `/plugin install captura --marketplace BillalbertCode/captura-cli`.
+
+| Pieza | Qué hace |
+|---|---|
+| Skill `captura` | Reglas, flujo y códigos de salida para el agente, con `references/` (API, escenarios, recetas, datos, entorno, errores) |
+| Hook de inicio | Una línea de contexto: si `captura-cli` está instalado y el estado del workspace; si no está, cómo instalarlo |
+| Hook de cierre (opt-in) | Con `"evidencia": { "hook": true }` en el `captura.config.json` del proyecto: si el turno tocó archivos de interfaz y no dejó evidencia posterior (un `manifest.json` con capturas y recetas declaradas), le pide al agente que la deje o que termine con `SIN_EVIDENCIA: <motivo>`. Pide una sola vez por turno |
+
+Los hooks nunca traban al agente: ante un error propio dejan seguir.
 - Sin escribir código: un escenario en JSON con `captura-cli validar` y `captura-cli run`, y `captura-cli explorar`
   para hallar selectores: [docs/escenarios.md](docs/escenarios.md).
 - Configuración (`captura.config.json`, variables `CAPTURA_*`, `captura-cli config`): [docs/configuracion.md](docs/configuracion.md).

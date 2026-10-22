@@ -19,6 +19,8 @@ export interface Config {
   rutas: { salidas?: string; recetas?: string; helpers?: string; escenarios?: string; sesiones?: string }
   adaptadores: Partial<Record<'credenciales' | 'identificador' | 'entorno' | 'publicacion' | 'correo', RefAdaptador>>
   extras: Extra[]
+  /** Hook de cierre del plugin: exige evidencia si en el turno se tocó la interfaz. Apagado por defecto. */
+  evidencia: { hook: boolean; patrones: string[]; horas: number }
 }
 
 export const DEFECTO: Config = {
@@ -30,12 +32,14 @@ export const DEFECTO: Config = {
   rutas: {},
   adaptadores: {},
   extras: [],
+  evidencia: { hook: false, patrones: ['**/*.tsx', '**/*.jsx', '**/*.vue', '**/*.svelte', '**/*.html', '**/*.css', '**/*.scss'], horas: 12 },
 }
 
 export class ConfigInvalida extends Error {}
 
-const CLAVES_RAIZ = ['$schema', 'viewport', 'sesionMin', 'apps', 'id', 'credenciales', 'rutas', 'adaptadores', 'extras'] as const
+const CLAVES_RAIZ = ['$schema', 'viewport', 'sesionMin', 'apps', 'id', 'credenciales', 'rutas', 'adaptadores', 'extras', 'evidencia'] as const
 const CLAVES: Record<string, readonly string[]> = {
+  evidencia: ['hook', 'patrones', 'horas'],
   viewport: ['width', 'height'],
   id: ['patron', 'mayusculas'],
   credenciales: ['archivo', 'prefijo', 'alias'],
@@ -55,6 +59,7 @@ const CLAVES_APP = ['baseUrl', 'login', 'campoUsuario', 'campoClave', 'campos', 
 const VALORES_CAMPO = ['usuario', 'clave', 'letra', 'numero']
 
 const esObjeto = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x)
+const texto = (x: unknown): x is string => typeof x === 'string' && x.trim() !== ''
 
 function exigir(cond: boolean, archivo: string, clave: string, forma: string): asserts cond {
   if (!cond) throw new ConfigInvalida(`CONFIG_INVALIDA: ${archivo}: "${clave}" debe ser ${forma}`)
@@ -151,6 +156,15 @@ export function normalizar(crudo: unknown, archivo: string): Config {
   const extras = c['extras'] ?? []
   exigir(Array.isArray(extras) && extras.every((x) => EXTRAS.includes(x as Extra)), archivo, 'extras', `una lista con: ${EXTRAS.join(', ')}`)
 
+  const ev = c['evidencia'] ?? {}
+  exigir(esObjeto(ev), archivo, 'evidencia', '{ "hook": bool, "patrones": ["**/*.tsx", …], "horas": n }')
+  const hook = ev['hook'] ?? DEFECTO.evidencia.hook
+  exigir(typeof hook === 'boolean', archivo, 'evidencia.hook', 'true o false')
+  const patrones = ev['patrones'] ?? DEFECTO.evidencia.patrones
+  exigir(Array.isArray(patrones) && patrones.length > 0 && patrones.every(texto), archivo, 'evidencia.patrones', 'una lista de globs (p. ej. "src/**/*.tsx")')
+  const horas = ev['horas'] ?? DEFECTO.evidencia.horas
+  exigir(typeof horas === 'number' && horas > 0, archivo, 'evidencia.horas', 'horas hacia atrás para los commits del turno (número positivo)')
+
   return {
     viewport: { width: v['width'] as number, height: v['height'] as number },
     sesionMin,
@@ -164,6 +178,7 @@ export function normalizar(crudo: unknown, archivo: string): Config {
     rutas: rutas as Config['rutas'],
     adaptadores: ad as Config['adaptadores'],
     extras: [...new Set(extras as Extra[])],
+    evidencia: { hook, patrones: patrones as string[], horas },
   }
 }
 

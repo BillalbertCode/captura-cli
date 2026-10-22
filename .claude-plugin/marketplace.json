@@ -1,0 +1,12 @@
+{
+  "name": "captura-cli",
+  "description": "Plugin de Claude Code para captura-cli: evidencia en el navegador y pruebas de punta a punta.",
+  "owner": { "name": "Billalbert Martinez" },
+  "plugins": [
+    {
+      "name": "captura",
+      "source": "./plugin",
+      "description": "Skill, hook de inicio y hook de cierre (opt-in) para verificar en el navegador con captura-cli."
+    }
+  ]
+}

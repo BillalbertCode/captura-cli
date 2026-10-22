@@ -74,6 +74,16 @@
         "correo": { "$ref": "#/$defs/adaptador" }
       }
     },
+    "evidencia": {
+      "description": "Hook de cierre del plugin de Claude Code (apagado por defecto).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hook": { "description": "true: pedir evidencia si el turno tocó la interfaz sin dejarla.", "type": "boolean" },
+        "patrones": { "description": "Globs de archivos de interfaz, relativos a la raíz del repo.", "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "horas": { "description": "Commits de las últimas N horas cuentan como del turno. Por defecto 12.", "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
     "extras": {
       "description": "Partes opcionales. \"correo\" carga builtin:mailpit si no se declara adaptadores.correo.",
       "type": "array",

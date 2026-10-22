@@ -1,0 +1,10 @@
+{
+  "name": "captura",
+  "version": "1.0.0",
+  "description": "Evidencia de lo que hizo el agente en el navegador (capturas con leyenda y marca roja, informe y manifest) y pruebas de punta a punta con escenarios, usando el comando captura-cli.",
+  "author": { "name": "Billalbert Martinez" },
+  "homepage": "https://github.com/BillalbertCode/captura-cli",
+  "repository": "https://github.com/BillalbertCode/captura-cli",
+  "license": "MIT",
+  "keywords": ["playwright", "capturas", "evidencia", "e2e", "navegador"]
+}

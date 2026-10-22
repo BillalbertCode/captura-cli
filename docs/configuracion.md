@@ -44,6 +44,9 @@ es un error (`CONFIG_INVALIDA`, código 1) con la corrección sugerida; así un 
 | `rutas.sesiones` | almacén, por slot | Sesiones guardadas. Tienen cookies de usuarios reales |
 | `adaptadores.<tipo>` | el incluido neutro | `credenciales`, `identificador`, `entorno`, `publicacion`, `correo` |
 | `extras` | `[]` | `["correo"]` carga `builtin:mailpit` si no hay `adaptadores.correo` |
+| `evidencia.hook` | `false` | Activa el hook de cierre del plugin de Claude Code: exige evidencia si el turno tocó la interfaz |
+| `evidencia.patrones` | `**/*.tsx`, `**/*.jsx`, `**/*.vue`, `**/*.svelte`, `**/*.html`, `**/*.css`, `**/*.scss` | Qué archivos cuentan como interfaz (globs relativos a la raíz del repo) |
+| `evidencia.horas` | `12` | Hasta cuántas horas atrás cuentan los commits como «del turno» (lo sin commitear siempre cuenta) |
 
 El rol se normaliza para las variables: sin acentos, en mayúsculas y con `_` en lugar de espacios o signos. Así,
 `"jefe de área"` se lee de `CAPTURA_JEFE_DE_AREA_USUARIO`. Las variables del entorno del proceso mandan sobre el

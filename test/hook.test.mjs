@@ -105,6 +105,17 @@ test('cierre: apagado por defecto (sin "evidencia.hook") y en un workspace sin r
   assert.equal(r.stdout.trim(), '')
 })
 
+test('sin captura-cli instalado: el inicio dice cómo instalarlo; el cierre no hace nada; los dos salen con 0', () => {
+  // PATH solo con carpetas del sistema (sin el comando global) y sin CAPTURA_CLI.
+  const sistema = process.platform === 'win32' ? join(process.env.SYSTEMROOT ?? 'C:\\Windows', 'System32') : '/usr/bin:/bin'
+  const sinCli = { SYSTEMROOT: process.env.SYSTEMROOT ?? '', COMSPEC: process.env.COMSPEC ?? '', PATH: sistema, CAPTURA_HOME: casa }
+  for (const [evento, esperado] of [['inicio', /^captura-cli no está instalado: la skill captura lo necesita\. Instalar con: npm i -g --install-links github:BillalbertCode\/captura-cli#v\d+\.\d+\.\d+$/], ['cierre', /^$/]]) {
+    const r = spawnSync(process.execPath, [puente, evento], { input: JSON.stringify({ cwd: ws }), env: sinCli, encoding: 'utf8', timeout: 60000 })
+    assert.equal(r.status, 0, r.stderr)
+    assert.match(r.stdout.trim(), esperado)
+  }
+})
+
 test('cierre: entrada rota o vacía no bloquea ni falla', () => {
   for (const input of ['', 'no es json']) {
     const r = spawnSync(process.execPath, [puente, 'cierre'], { input, env, encoding: 'utf8', timeout: 60000 })

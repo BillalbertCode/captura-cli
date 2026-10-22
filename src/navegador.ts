@@ -10,7 +10,7 @@ import { grabarAcciones } from './grabacion.js'
 import { escribirInforme } from './informe.js'
 import { cerrarRecetas } from './recetas.js'
 import { CODIGOS, alSalir, cerrarTodo, salir } from './salida.js'
-import { anotarUso } from './uso.js'
+import { contar } from './uso.js'
 
 let vigilancia = false
 /** Página colgada (evento crash): manda sobre cualquier otro error que llegue después. */
@@ -78,7 +78,14 @@ export async function abrir({ ticket, browser = 'chromium', headless = true, vie
     if (n5) console.error(`AVISO_5XX: ${n5} respuesta(s) 5xx del servidor en esta corrida (detalle en informe.md y manifest.json)`)
     escribirInforme(page)
     try { await c.adaptadores.publicacion.publicar(base, ticket) } catch (e) { console.error(`AVISO: publicación: ${(e as Error).message}`) }
-    anotarUso({ evento: 'cerrar', id: ticket, casos: estado(page).casos.length, fotos: estado(page).fotos.length })
+    const e = estado(page)
+    contar((u) => {
+      u.ids.push(ticket)
+      u.casos.ok += e.casos.filter((x) => x.ok).length
+      u.casos.falla += e.casos.filter((x) => !x.ok).length
+      u.capturas += e.fotos.length
+      u.errores5xx += e.errores5xx.length
+    })
     soltar()
     await b.close()
   }

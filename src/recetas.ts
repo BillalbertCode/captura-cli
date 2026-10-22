@@ -13,6 +13,7 @@ import { ctx } from './contexto.js'
 import { type Declaracion, type Tramo, estado } from './estado.js'
 import { sinReceta } from './grabacion.js'
 import { CODIGOS } from './salida.js'
+import { contar } from './uso.js'
 
 export interface Receta {
   version?: number
@@ -85,14 +86,17 @@ export async function receta(page: Page, id: string, args: Record<string, unknow
     try { await r.hacer(page, args) } catch (err) {
       const msg = String((err as Error).message || err).split('\n')[0]!.slice(0, 200)
       anotar(clave, 'rota', v, e.id, msg)
+      contar((u) => { u.recetas.rota++ })
       throw new Error(`receta "${id}"@v${v} falló al ejecutar: ${msg}. Corregirla en ${archivoApp(r.origen)} y subir su version`)
     } finally { e.grabar = grab }
     if (r.verificar && !(await verifica())) {
       anotar(clave, 'rota', v, e.id, 'verificar() no pasa tras hacer()')
+      contar((u) => { u.recetas.rota++ })
       throw new Error(`receta "${id}"@v${v}: se ejecutó pero verificar() no pasa. Corregirla en ${archivoApp(r.origen)} y subir su version`)
     }
   }
   anotar(clave, 'ok', v, e.id)
+  contar((u) => { if (modo === 'ya estaba') u.recetas.yaEstaba++; else u.recetas.ejecutada++ })
   e.recetasUsadas.push({ id, version: v, modo })
   console.log(`receta ${id}@v${v}: ${modo}`)
 }
@@ -130,6 +134,7 @@ export async function cerrarRecetas(page: Page, d?: Declaracion): Promise<void> 
     console.log(`recetas candidatas: ${f} (${tramos.length} tramo(s) sin receta; borrador para revisar, no copiar a ciegas)`)
   }
   e.recetasResumen = { usadas, creadas, ninguna, pendiente: problemas.length > 0 }
+  contar((u) => { u.recetas.creadas += creadas.length; u.recetas.candidatas += tramos.length })
   for (const p of problemas) console.error(`ERROR recetas: ${p}`)
   if (problemas.length) process.exitCode = CODIGOS.RECETAS_SIN_DECLARAR
 }

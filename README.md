@@ -12,8 +12,8 @@ También corre pruebas de punta a punta bajo pedido a partir de un escenario en 
 
 > Estado: en construcción hacia la 1.0.0. Ya están el núcleo (API de código, 22 funciones), los adaptadores
 > incluidos, el registro de workspaces, la configuración, los escenarios (`validar`, `run`, `explorar`),
-> `manifest.json`, los avisos accionables (5xx, validaciones silenciosas) y el plugin de Claude Code. Falta la
-> medición de tokens (F7).
+> `manifest.json`, los avisos accionables (5xx, validaciones silenciosas), el plugin de Claude Code y la medición
+> de tokens (`captura-cli stats`). Falta comparar un flujo real contra la ronda de referencia.
 
 ## Instalación
 
@@ -120,6 +120,7 @@ Los hooks nunca traban al agente: ante un error propio dejan seguir.
 - Sin escribir código: un escenario en JSON con `captura-cli validar` y `captura-cli run`, y `captura-cli explorar`
   para hallar selectores: [docs/escenarios.md](docs/escenarios.md).
 - Configuración (`captura.config.json`, variables `CAPTURA_*`, `captura-cli config`): [docs/configuracion.md](docs/configuracion.md).
+- Medir tokens (libro de uso, `captura-cli stats`, transcritos de Claude Code): [docs/medicion.md](docs/medicion.md).
 - Diferencias con la herramienta original: [docs/desviaciones.md](docs/desviaciones.md).
 
 ## Principios

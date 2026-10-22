@@ -4,7 +4,7 @@
 import { createInterface } from 'node:readline/promises'
 import { cargarUno } from './adaptadores/cargar.js'
 import { TIPOS, type TipoAdaptador, esFaltaConfiguracion } from './adaptadores/contrato.js'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { PLANTILLAS } from './plantillas.js'
 import type { OpcionesRun } from './ejecutar.js'
@@ -13,6 +13,7 @@ import { recetasFaltantes } from './recetas.js'
 import { dirWorkspace, guardarConfigUsuario, home, leerConfigUsuario, leerRegistro, propuesta, raizWorkspace } from './almacen.js'
 import { ctx, hayContexto, preparar } from './contexto.js'
 import { CODIGOS, salir } from './salida.js'
+import { iniciarLibro } from './uso.js'
 import { VERSION } from './version.js'
 import { mensajeWorkspaceNuevo, registrar } from './workspace.js'
 
@@ -35,6 +36,11 @@ Uso:
                                            entorno, publicacion, correo) en <proyecto>/adaptadores/
   captura-cli entorno levantar <app> [args…] | estado | parar [app]
                                            servicios del slot propio, mediante el adaptador de entorno
+  captura-cli stats [--todos] [--desde 7d] [--json]
+                                           uso por comando (tokens estimados, tiempo, códigos), recetas,
+                                           casos y espacio ocupado; --todos suma todos los workspaces
+  captura-cli stats --transcrito <sesión.jsonl>
+                                           tokens reales de una sesión de Claude Code y cuánto vino de captura-cli
   captura-cli hook cierre | inicio         los usa el plugin de Claude Code (leen el JSON del hook por stdin)
   captura-cli --version | --help
 
@@ -61,7 +67,7 @@ Códigos de salida: 0 ok · 1 error · 2 escenario inválido · 3 FALTAN_CREDENC
   · 5 recetas sin declarar · 6 WORKSPACE_NUEVO · 7 PAGINA_COLGADA`
 
 interface Args { pos: string[]; op: Record<string, string | true> }
-const CON_VALOR = ['en', 'salidas', 'proyecto', 'estadisticas', 'id', 'app', 'rol', 'browser', 'canal', 'viewport', 'sesion-min', 'timeout', 'slot', 'out', 'config']
+const CON_VALOR = ['transcrito', 'desde', 'en', 'salidas', 'proyecto', 'estadisticas', 'id', 'app', 'rol', 'browser', 'canal', 'viewport', 'sesion-min', 'timeout', 'slot', 'out', 'config']
 function parsear(argv: string[]): Args {
   const pos: string[] = [], op: Record<string, string | true> = {}
   for (let i = 0; i < argv.length; i++) {
@@ -261,6 +267,42 @@ async function entornoCli(sub: string | undefined, args: string[]): Promise<numb
   return r.ok ? CODIGOS.OK : CODIGOS.ERROR
 }
 
+// ---------- stats ----------
+
+async function statsCli(op: Args['op']): Promise<number> {
+  const s = await import('./stats.js')
+  const tr = texto(op['transcrito'])
+  if (tr) {
+    if (!existsSync(tr)) return salir(`stats: no existe el transcrito ${tr}`, CODIGOS.ERROR)
+    const r = s.leerTranscrito(tr)
+    console.log(op['json'] ? JSON.stringify(r, null, 2) : s.formatearTranscrito(tr, r))
+    return CODIGOS.OK
+  }
+  const d = texto(op['desde'])
+  if (d !== undefined && !/^\d+d$/.test(d)) return salir(`stats --desde: días, p. ej. 7d (recibido "${d}")`, CODIGOS.ERROR)
+  const desde = d ? Date.now() - Number(d.slice(0, -1)) * 86400000 : 0
+  const etiqueta = d ? new Date(desde).toISOString().slice(0, 10) : ''
+  if (op['todos']) {
+    const raizWs = join(home(), 'workspaces')
+    const nombres = existsSync(raizWs) ? readdirSync(raizWs) : []
+    const todas = nombres.flatMap((n) => s.leerLibro(join(raizWs, n, 'uso.jsonl'), desde))
+    if (op['json']) { console.log(JSON.stringify(s.resumir(todas), null, 2)); return CODIGOS.OK }
+    console.log(s.formatear(`todos (${nombres.length} workspace(s))`, s.resumir(todas), etiqueta))
+    for (const n of nombres) {
+      const r = s.resumir(s.leerLibro(join(raizWs, n, 'uso.jsonl'), desde))
+      if (r.corridas) console.log(`  ${n}: ${r.corridas} corrida(s), ${r.tokens} tokens estimados`)
+    }
+    return CODIGOS.OK
+  }
+  const c = ctx()
+  const r = s.resumir(s.leerLibro(join(c.dirWs, 'uso.jsonl'), desde))
+  if (op['json']) { console.log(JSON.stringify(r, null, 2)); return CODIGOS.OK }
+  console.log(s.formatear(c.registro.nombre, r, etiqueta))
+  console.log(s.espacio(c.rutas.salidas, c.dirWs))
+  if (!c.registro.estadisticas) console.log('(el registro de estadísticas está apagado: captura-cli config estadisticas si)')
+  return CODIGOS.OK
+}
+
 // ---------- hooks del plugin ----------
 
 /** La entrada JSON que Claude Code pasa a un hook por stdin, con tope: un hook nunca se queda esperando. */
@@ -296,9 +338,11 @@ async function main(): Promise<number> {
   const cmd = pos[0]
   if (op['version']) { console.log(VERSION); return 0 }
   if (op['help'] || cmd === 'help' || !cmd) { console.log(AYUDA); return cmd || op['help'] ? 0 : 1 }
+  if (cmd !== 'hook' && cmd !== 'stats') iniciarLibro(pos.slice(0, cmd === 'adaptador' || cmd === 'adaptadores' || cmd === 'entorno' || cmd === 'config' ? 2 : 1).join(' '))
   if (cmd === 'init') return init(op)
   if (cmd === 'config' && pos[1]) return cambiarConfig(pos[1], pos[2])
   if (cmd === 'hook') return hookCli(pos[1])
+  if (cmd === 'stats' && (op['todos'] || op['transcrito'])) return statsCli(op)
   // Opciones que equivalen a variables de entorno: se aplican antes de resolver el contexto.
   for (const [o, v] of [['config', 'CAPTURA_CONFIG'], ['out', 'CAPTURA_OUT'], ['slot', 'CAPTURA_SLOT'], ['canal', 'CAPTURA_CANAL']] as const) {
     const x = texto(op[o])
@@ -318,6 +362,7 @@ async function main(): Promise<number> {
     return ejecutarEscenario(esc, opcionesNavegador(op))
   }
   if (cmd === 'explorar') return explorarCli(pos[1], op)
+  if (cmd === 'stats') return statsCli(op)
   if (cmd === 'adaptador' && pos[1] === 'nuevo') return adaptadorNuevo(pos[2], op)
   if (cmd === 'entorno') return entornoCli(pos[1], pos.slice(2))
   if (cmd === 'config') {

@@ -41,6 +41,11 @@ Uso:
                                            casos y espacio ocupado; --todos suma todos los workspaces
   captura-cli stats --transcrito <sesión.jsonl>
                                            tokens reales de una sesión de Claude Code y cuánto vino de captura-cli
+  captura-cli limpiar [--antes 30d] [--aplicar]
+                                           residuos del almacén (temporales, caché de más de 14 días, sesiones
+                                           vencidas; capturas solo con --antes). Sin --aplicar solo lista
+  captura-cli doctor [--instalar]          qué falta (Node, Playwright, navegadores, workspace, config,
+                                           adaptadores) y cómo arreglarlo; --instalar baja Chromium
   captura-cli hook cierre | inicio         los usa el plugin de Claude Code (leen el JSON del hook por stdin)
   captura-cli --version | --help
 
@@ -67,7 +72,7 @@ Códigos de salida: 0 ok · 1 error · 2 escenario inválido · 3 FALTAN_CREDENC
   · 5 recetas sin declarar · 6 WORKSPACE_NUEVO · 7 PAGINA_COLGADA`
 
 interface Args { pos: string[]; op: Record<string, string | true> }
-const CON_VALOR = ['transcrito', 'desde', 'en', 'salidas', 'proyecto', 'estadisticas', 'id', 'app', 'rol', 'browser', 'canal', 'viewport', 'sesion-min', 'timeout', 'slot', 'out', 'config']
+const CON_VALOR = ['antes', 'transcrito', 'desde', 'en', 'salidas', 'proyecto', 'estadisticas', 'id', 'app', 'rol', 'browser', 'canal', 'viewport', 'sesion-min', 'timeout', 'slot', 'out', 'config']
 function parsear(argv: string[]): Args {
   const pos: string[] = [], op: Record<string, string | true> = {}
   for (let i = 0; i < argv.length; i++) {
@@ -255,6 +260,10 @@ async function entornoCli(sub: string | undefined, args: string[]): Promise<numb
     if (sub === 'levantar') {
       const app = args[0]
       if (!app) return salir('entorno levantar: falta la app', CODIGOS.ERROR)
+      // La caché del slot caduca sola: lo que tiene más de 14 días se borra antes de levantar.
+      const { expirarCache, DIAS_CACHE } = await import('./limpiar.js')
+      const v = expirarCache(c.dirWs, c.dirSlot)
+      if (v.borrados) console.log(`caché: ${v.borrados} archivo(s) de más de ${DIAS_CACHE} días borrados (${Math.round(v.bytes / 1024)} KB)`)
       r = await e.levantar!(app, { slot: c.slot, args: args.slice(1) })
     } else if (sub === 'estado') r = await e.estado!({ slot: c.slot })
     else r = await e.parar!(args[0], { slot: c.slot })
@@ -265,6 +274,29 @@ async function entornoCli(sub: string | undefined, args: string[]): Promise<numb
   if (r.salida) console.log(r.salida)
   console.log(`entorno ${sub}: ${r.ok ? 'ok' : 'con problemas'} (slot ${c.slot})`)
   return r.ok ? CODIGOS.OK : CODIGOS.ERROR
+}
+
+// ---------- limpiar y doctor ----------
+
+async function limpiarCli(op: Args['op']): Promise<number> {
+  const a = texto(op['antes'])
+  if (a !== undefined && !/^\d+d$/.test(a)) return salir(`limpiar --antes: días, p. ej. 30d (recibido "${a}")`, CODIGOS.ERROR)
+  const c = ctx()
+  const l = await import('./limpiar.js')
+  const { grupos, avisos } = l.planificar({ dirWs: c.dirWs, salidas: c.rutas.salidas, corridaActual: c.corrida, ...(a ? { antesDias: Number(a.slice(0, -1)) } : {}) })
+  console.log(l.formatearPlan(grupos, avisos, !!op['aplicar']))
+  if (!op['aplicar'] || !grupos.length) return CODIGOS.OK
+  const r = l.aplicar(c.dirWs, grupos)
+  for (const e of r.errores) console.error(`AVISO: ${e}`)
+  console.log(`borrados: ${r.borrados} archivo(s), ${Math.round(r.bytes / 1024)} KB`)
+  return r.errores.length ? CODIGOS.ERROR : CODIGOS.OK
+}
+
+async function doctorCli(op: Args['op']): Promise<number> {
+  const d = await import('./doctor.js')
+  const cs = await d.revisar({ instalar: !!op['instalar'] })
+  console.log(d.formatearChequeos(cs))
+  return cs.some((x) => x.estado === 'FALTA') ? CODIGOS.ERROR : CODIGOS.OK
 }
 
 // ---------- stats ----------
@@ -343,6 +375,7 @@ async function main(): Promise<number> {
   if (cmd === 'config' && pos[1]) return cambiarConfig(pos[1], pos[2])
   if (cmd === 'hook') return hookCli(pos[1])
   if (cmd === 'stats' && (op['todos'] || op['transcrito'])) return statsCli(op)
+  if (cmd === 'doctor') return doctorCli(op)
   // Opciones que equivalen a variables de entorno: se aplican antes de resolver el contexto.
   for (const [o, v] of [['config', 'CAPTURA_CONFIG'], ['out', 'CAPTURA_OUT'], ['slot', 'CAPTURA_SLOT'], ['canal', 'CAPTURA_CANAL']] as const) {
     const x = texto(op[o])
@@ -363,6 +396,7 @@ async function main(): Promise<number> {
   }
   if (cmd === 'explorar') return explorarCli(pos[1], op)
   if (cmd === 'stats') return statsCli(op)
+  if (cmd === 'limpiar') return limpiarCli(op)
   if (cmd === 'adaptador' && pos[1] === 'nuevo') return adaptadorNuevo(pos[2], op)
   if (cmd === 'entorno') return entornoCli(pos[1], pos.slice(2))
   if (cmd === 'config') {

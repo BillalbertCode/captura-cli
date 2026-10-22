@@ -34,7 +34,8 @@ dependencia. No compila nada ni necesita TypeScript.
 
 - Actualizar: el mismo comando con la etiqueta nueva (`#v1.1.0`).
 - Desinstalar: `npm uninstall -g captura-cli`. Las salidas en `~/.captura-cli/` se conservan.
-- Navegadores: la primera vez, `npx playwright install chromium` (si ya están en la máquina, no hace falta).
+- Navegadores y todo lo demás: `captura-cli doctor` dice qué falta y cómo arreglarlo; `captura-cli doctor --instalar`
+  baja el Chromium de Playwright si no está.
 
 ### Sin instalar: `npx`
 
@@ -122,6 +123,19 @@ Los hooks nunca traban al agente: ante un error propio dejan seguir.
 - Configuración (`captura.config.json`, variables `CAPTURA_*`, `captura-cli config`): [docs/configuracion.md](docs/configuracion.md).
 - Medir tokens (libro de uso, `captura-cli stats`, transcritos de Claude Code): [docs/medicion.md](docs/medicion.md).
 - Diferencias con la herramienta original: [docs/desviaciones.md](docs/desviaciones.md).
+
+## Mantenimiento
+
+```sh
+captura-cli doctor                 # Node, Playwright, navegadores, workspace, config y adaptadores
+captura-cli limpiar                # lista residuos del almacén y cuánto liberan (no borra nada)
+captura-cli limpiar --aplicar      # los borra: temporales huérfanos, caché de más de 14 días, sesiones vencidas
+captura-cli limpiar --antes 30d    # suma las capturas sin cambios en 30 días (también solo lista sin --aplicar)
+```
+
+`limpiar` borra solo dentro de su propio almacén (`~/.captura-cli/workspaces/<nombre>-<hash>/`), archivo por archivo y
+comprobando cada ruta; nunca hace un borrado recursivo de una carpeta que se le pase. Si las salidas se configuraron
+fuera del almacén, no las toca. La caché de cada slot además caduca sola: `entorno levantar` borra la de más de 14 días.
 
 ## Principios
 

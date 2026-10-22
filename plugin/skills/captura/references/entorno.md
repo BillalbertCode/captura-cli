@@ -24,6 +24,13 @@ captura-cli entorno parar [app]               # solo cuando el usuario lo pide
 - **Comandos de servicios nunca por una tubería** (`| tail` deja el comando sin volver): con tope y leyendo el
   resumen, p. ej. `timeout 400 captura-cli entorno levantar web`.
 
+## Diagnóstico y residuos
+
+- Algo no arranca (navegador, Playwright, config, adaptadores): `captura-cli doctor`. Si falta Chromium,
+  `captura-cli doctor --instalar`.
+- Espacio: `captura-cli stats` muestra cuánto ocupa cada parte del almacén; `captura-cli limpiar` lista lo que se
+  puede borrar. **`--aplicar` solo si el usuario lo pide**, y las capturas (`--antes`) solo con su confirmación.
+
 ## Procesos propios
 
 Antes de reportar, listar y cerrar lo propio: navegadores o scripts de más de 30 minutos que apuntan a la carpeta de

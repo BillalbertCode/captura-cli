@@ -10,10 +10,9 @@ de lo que hizo el agente en el navegador, para que una persona la revise en minu
 
 También corre pruebas de punta a punta bajo pedido a partir de un escenario en JSON.
 
-> Estado: en construcción hacia la 1.0.0. Ya están el núcleo (API de código, 22 funciones), los adaptadores
-> incluidos, el registro de workspaces, la configuración, los escenarios (`validar`, `run`, `explorar`),
-> `manifest.json`, los avisos accionables (5xx, validaciones silenciosas), el plugin de Claude Code y la medición
-> de tokens (`captura-cli stats`). Falta comparar un flujo real contra la ronda de referencia.
+> Versión 1.0.0: núcleo (API de código, 22 funciones), adaptadores, workspaces, configuración, escenarios
+> (`validar`, `run`, `explorar`), `manifest.json`, avisos accionables, plugin de Claude Code, medición de tokens
+> (`stats`) y mantenimiento (`doctor`, `limpiar`). Cambios: [CHANGELOG.md](CHANGELOG.md).
 
 ## Instalación
 

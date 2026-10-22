@@ -3,9 +3,10 @@
 // salvo `init` en una terminal interactiva.
 import { createInterface } from 'node:readline/promises'
 import { cargarUno } from './adaptadores/cargar.js'
-import { TIPOS, type TipoAdaptador } from './adaptadores/contrato.js'
-import { existsSync, readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { TIPOS, type TipoAdaptador, esFaltaConfiguracion } from './adaptadores/contrato.js'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join, relative, resolve, sep } from 'node:path'
+import { PLANTILLAS } from './plantillas.js'
 import type { OpcionesRun } from './ejecutar.js'
 import { type Escenario, recetasDe, validarEscenario } from './escenario.js'
 import { recetasFaltantes } from './recetas.js'
@@ -29,6 +30,11 @@ Uso:
                                            --errores agrega campos inválidos y mensajes de error visibles
   captura-cli recetas [app]                catálogo de recetas con versión y estado
   captura-cli adaptadores verificar        comprueba cada adaptador contra el contrato
+  captura-cli adaptador nuevo <tipo> [--en <ruta.mjs>]
+                                           plantilla de un adaptador propio (credenciales, identificador,
+                                           entorno, publicacion, correo) en <proyecto>/adaptadores/
+  captura-cli entorno levantar <app> [args…] | estado | parar [app]
+                                           servicios del slot propio, mediante el adaptador de entorno
   captura-cli --version | --help
 
   <escenario> es una ruta a un .json o un nombre de la carpeta de escenarios del proyecto.
@@ -54,7 +60,7 @@ Códigos de salida: 0 ok · 1 error · 2 escenario inválido · 3 FALTAN_CREDENC
   · 5 recetas sin declarar · 6 WORKSPACE_NUEVO · 7 PAGINA_COLGADA`
 
 interface Args { pos: string[]; op: Record<string, string | true> }
-const CON_VALOR = ['salidas', 'proyecto', 'estadisticas', 'id', 'app', 'rol', 'browser', 'canal', 'viewport', 'sesion-min', 'timeout', 'slot', 'out', 'config']
+const CON_VALOR = ['en', 'salidas', 'proyecto', 'estadisticas', 'id', 'app', 'rol', 'browser', 'canal', 'viewport', 'sesion-min', 'timeout', 'slot', 'out', 'config']
 function parsear(argv: string[]): Args {
   const pos: string[] = [], op: Record<string, string | true> = {}
   for (let i = 0; i < argv.length; i++) {
@@ -214,6 +220,46 @@ async function explorarCli(ruta: string | undefined, op: Args['op']): Promise<nu
   return CODIGOS.OK
 }
 
+// ---------- adaptadores propios y entorno ----------
+
+function adaptadorNuevo(tipo: string | undefined, op: Args['op']): number {
+  if (!tipo || !(TIPOS as readonly string[]).includes(tipo)) return salir(`adaptador nuevo: falta el tipo (${TIPOS.join(', ')})`, CODIGOS.ERROR)
+  const c = ctx()
+  const t = tipo as TipoAdaptador
+  const destino = texto(op['en']) ? resolve(texto(op['en'])!) : join(c.registro.proyecto, 'adaptadores', `${t}.mjs`)
+  if (existsSync(destino)) return salir(`adaptador nuevo: ${destino} ya existe; no se sobrescribe (usar --en <otra ruta>)`, CODIGOS.ERROR)
+  mkdirSync(dirname(destino), { recursive: true })
+  writeFileSync(destino, PLANTILLAS[t])
+  const base = c.configArchivo ? dirname(c.configArchivo) : c.raiz
+  const rel = relative(base, destino).split(sep).join('/')
+  console.log(`adaptador: ${destino}`)
+  console.log(`declararlo en ${c.configArchivo ?? 'captura.config.json'}:\n  "adaptadores": { "${t}": { "usa": "${rel.startsWith('.') ? rel : `./${rel}`}" } }`)
+  console.log('comprobar: captura-cli adaptadores verificar')
+  return CODIGOS.OK
+}
+
+async function entornoCli(sub: string | undefined, args: string[]): Promise<number> {
+  const c = ctx()
+  const e = c.adaptadores.entorno
+  if (sub !== 'levantar' && sub !== 'estado' && sub !== 'parar') return salir('entorno: levantar <app> [args…] | estado | parar [app]', CODIGOS.ERROR)
+  if (typeof e[sub] !== 'function') return salir(`entorno ${sub}: el adaptador de entorno no implementa ${sub}(); declarar "comandos.${sub}" (builtin:comando) o escribir uno propio (captura-cli adaptador nuevo entorno)`, CODIGOS.ERROR)
+  let r
+  try {
+    if (sub === 'levantar') {
+      const app = args[0]
+      if (!app) return salir('entorno levantar: falta la app', CODIGOS.ERROR)
+      r = await e.levantar!(app, { slot: c.slot, args: args.slice(1) })
+    } else if (sub === 'estado') r = await e.estado!({ slot: c.slot })
+    else r = await e.parar!(args[0], { slot: c.slot })
+  } catch (err) {
+    if (esFaltaConfiguracion(err)) return salir(`FALTAN_CREDENCIALES: entorno -> ${err.message}`, CODIGOS.FALTAN_CREDENCIALES)
+    throw err
+  }
+  if (r.salida) console.log(r.salida)
+  console.log(`entorno ${sub}: ${r.ok ? 'ok' : 'con problemas'} (slot ${c.slot})`)
+  return r.ok ? CODIGOS.OK : CODIGOS.ERROR
+}
+
 async function main(): Promise<number> {
   const { pos, op } = parsear(process.argv.slice(2))
   const cmd = pos[0]
@@ -240,6 +286,8 @@ async function main(): Promise<number> {
     return ejecutarEscenario(esc, opcionesNavegador(op))
   }
   if (cmd === 'explorar') return explorarCli(pos[1], op)
+  if (cmd === 'adaptador' && pos[1] === 'nuevo') return adaptadorNuevo(pos[2], op)
+  if (cmd === 'entorno') return entornoCli(pos[1], pos.slice(2))
   if (cmd === 'config') {
     const r = leerRegistro(c.raiz)
     const ad = (t: TipoAdaptador): string => {

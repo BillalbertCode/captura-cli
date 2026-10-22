@@ -17,6 +17,7 @@ exige el comportamiento nuevo. Un caso «conocido, no corregido» se mantiene ig
 | Slot → puertos | `CAPTURA_SLOT` suma 100·N al puerto dentro del núcleo | El núcleo separa por slot lo que guarda; la URL la da el adaptador de entorno (`builtin:comando` con `puertoPorSlot`) | El esquema de puertos es del proyecto |
 | Dónde caen las salidas | `<repo>/<salida>/<id>/` | `~/.captura-cli/workspaces/<nombre>-<hash>/captures/<id>/`, o la ruta elegida al registrar el workspace | El repo que se prueba no recibe nada |
 | Workspace sin registrar | No aplica | Código **6** `WORKSPACE_NUEVO`, con las preguntas para el agente | Nuevo |
+| Id en el informe y el manifest | El id en mayúsculas (igual que la carpeta) | El id tal como se pasó; la carpeta la decide el adaptador de identificador (`carpeta(id)`), y `publicar(carpeta, id)` recibe el id | Un adaptador puede nombrar la carpeta distinto del id (p. ej. para un gestor de tareas) |
 | Rutas en los mensajes de recetas | `captura.recetas/<app>.mjs` | La ruta real de la carpeta de recetas del workspace | La carpeta ya no es fija |
 
 ## Agregados (no cambian nada de lo anterior)

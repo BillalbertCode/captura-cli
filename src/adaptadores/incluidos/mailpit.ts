@@ -1,10 +1,10 @@
 // builtin:mailpit — correo de solo lectura desde una instancia de Mailpit. Opciones:
 //   url?: "http://host:8025"    variable?: nombre de la variable de entorno con la URL (CAPTURA_MAILPIT_URL)
-import type { AdaptadorCorreo, Correo, Fabrica } from '../contrato.js'
+import { type AdaptadorCorreo, type Correo, type Fabrica, FALTA_CONFIGURACION } from '../contrato.js'
 
 export class CorreoSinConfigurar extends Error {
   readonly variable: string
-  constructor(variable: string) { super(`definir ${variable} (URL de Mailpit) o adaptadores.correo.url`); this.variable = variable }
+  constructor(variable: string) { super(`definir ${variable} (URL de Mailpit) o adaptadores.correo.url`); this.variable = variable; this.name = FALTA_CONFIGURACION }
 }
 
 interface Mensaje { ID: string }

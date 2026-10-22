@@ -126,7 +126,7 @@ export function validarFabrica(x: unknown, tipo: TipoAdaptador): string[] {
   if (x['contrato'] !== CONTRATO) {
     p.push(x['contrato'] === undefined
       ? `falta "contrato: ${CONTRATO}"`
-      : `declara contrato ${String(x['contrato'])} y esta versión de captura-cli usa el ${CONTRATO}; ver CHANGELOG para lo que cambió`)
+      : `declara contrato ${String(x['contrato'])} y esta versión de captura-cli usa el ${CONTRATO}; ver docs/adaptadores.md («Versiones del contrato»)`)
   }
   if (x['tipo'] !== tipo) p.push(`declara tipo "${String(x['tipo'])}" y se usa como "${tipo}"`)
   if (typeof x['crear'] !== 'function') p.push('falta la función crear(opciones, contexto)')
@@ -142,4 +142,12 @@ export function validarInstancia(x: unknown, tipo: TipoAdaptador): string[] {
   return p
 }
 
-export const sonFaltantes = (c: Credenciales | CredencialesFaltantes): c is CredencialesFaltantes => 'faltan' in c
+/**
+ * Un adaptador que necesita configuración que falta lanza un error con este nombre; el núcleo sale con
+ * FALTAN_CREDENCIALES (código 3) y su mensaje. No hace falta importar nada:
+ *   throw Object.assign(new Error('definir MI_URL'), { name: 'FaltaConfiguracion' })
+ */
+export const FALTA_CONFIGURACION = 'FaltaConfiguracion'
+export const esFaltaConfiguracion = (e: unknown): e is Error => e instanceof Error && e.name === FALTA_CONFIGURACION
+
+export const sonFaltantes =(c: Credenciales | CredencialesFaltantes): c is CredencialesFaltantes => 'faltan' in c

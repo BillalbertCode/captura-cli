@@ -93,7 +93,10 @@ await cerrar({ ninguna: 'verificación puntual' })
 
 - La primera vez en una carpeta sale con código 6 y explica cómo registrarla (`captura-cli init --yes …`).
 - Credenciales por defecto: `CAPTURA_<ROL>_USUARIO` y `CAPTURA_<ROL>_CLAVE`, en `.env` o en el entorno.
-- Correo: `import { mailpit } from 'captura-cli/correo'`. Para escribir adaptadores propios: `captura-cli/adaptadores`.
+- Correo: `import { mailpit } from 'captura-cli/correo'`.
+- Lo propio de un proyecto (credenciales, formato de id, servicios, publicación, correo) entra por adaptadores:
+  [docs/adaptadores.md](docs/adaptadores.md) (`captura-cli adaptador nuevo <tipo>` crea una plantilla).
+- Instrucciones para el agente (skill corta con referencias): [skill/captura/SKILL.md](skill/captura/SKILL.md).
 - Sin escribir código: un escenario en JSON con `captura-cli validar` y `captura-cli run`, y `captura-cli explorar`
   para hallar selectores: [docs/escenarios.md](docs/escenarios.md).
 - Configuración (`captura.config.json`, variables `CAPTURA_*`, `captura-cli config`): [docs/configuracion.md](docs/configuracion.md).

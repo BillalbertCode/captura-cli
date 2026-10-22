@@ -60,10 +60,10 @@ export async function abrir({ ticket, browser = 'chromium', headless = true, vie
   contexto.setDefaultTimeout(30000)
   contexto.setDefaultNavigationTimeout(45000)
   const page = await contexto.newPage()
-  const id = c.adaptadores.identificador.carpeta(ticket)
-  const base = join(c.rutas.salidas, id, subcarpeta)
+  // El id va tal cual al informe, al manifest y a publicar(); la carpeta la decide el adaptador de identificador.
+  const base = join(c.rutas.salidas, c.adaptadores.identificador.carpeta(ticket), subcarpeta)
   crearEstado(page, {
-    id, dir: base, base, casos: [], cambios: [], fotos: [], marcas: [], grabar: true, acciones: [], tramos: [], recetasUsadas: [], ultimoPaso: '', errores5xx: [],
+    id: ticket, dir: base, base, casos: [], cambios: [], fotos: [], marcas: [], grabar: true, acciones: [], tramos: [], recetasUsadas: [], ultimoPaso: '', errores5xx: [],
   })
   page.on('crash', () => {
     colgada = mensajeColgada(page.url(), pasoActual(page))
@@ -77,8 +77,8 @@ export async function abrir({ ticket, browser = 'chromium', headless = true, vie
     const n5 = estado(page).errores5xx.length
     if (n5) console.error(`AVISO_5XX: ${n5} respuesta(s) 5xx del servidor en esta corrida (detalle en informe.md y manifest.json)`)
     escribirInforme(page)
-    try { await c.adaptadores.publicacion.publicar(base, id) } catch (e) { console.error(`AVISO: publicación: ${(e as Error).message}`) }
-    anotarUso({ evento: 'cerrar', id, casos: estado(page).casos.length, fotos: estado(page).fotos.length })
+    try { await c.adaptadores.publicacion.publicar(base, ticket) } catch (e) { console.error(`AVISO: publicación: ${(e as Error).message}`) }
+    anotarUso({ evento: 'cerrar', id: ticket, casos: estado(page).casos.length, fotos: estado(page).fotos.length })
     soltar()
     await b.close()
   }

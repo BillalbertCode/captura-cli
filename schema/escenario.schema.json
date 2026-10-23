@@ -5,13 +5,13 @@
   "description": "Flujo en JSON para `captura-cli run`. La validación de referencia es `captura-cli validar`. Ver docs/escenarios.md",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "id", "rol", "casos"],
+  "required": ["version", "id", "casos"],
   "properties": {
     "$schema": { "type": "string" },
     "version": { "const": 1 },
     "id": { "type": "string", "minLength": 1 },
     "app": { "type": "string", "minLength": 1 },
-    "rol": { "type": "string", "minLength": 1 },
+    "rol": { "description": "Con qué rol entrar. Solo hace falta si la app tiene login.", "type": "string", "minLength": 1 },
     "recetas": {
       "type": "object",
       "additionalProperties": false,

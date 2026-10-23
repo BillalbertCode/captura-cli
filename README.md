@@ -21,7 +21,7 @@ No se publica en npm. Se instala desde GitHub, fijando una etiqueta de versión.
 ### Global (recomendado): el comando `captura-cli` queda disponible en cualquier terminal
 
 ```sh
-npm i -g --install-links github:BillalbertCode/captura-cli#v1.0.0
+npm i -g --install-links github:BillalbertCode/captura-cli#v1.0.1
 captura-cli --version
 # 1.0.0
 ```
@@ -39,7 +39,7 @@ dependencia. No compila nada ni necesita TypeScript.
 ### Sin instalar: `npx`
 
 ```sh
-npx --yes github:BillalbertCode/captura-cli#v1.0.0 --version
+npx --yes github:BillalbertCode/captura-cli#v1.0.1 --version
 # 1.0.0
 ```
 
@@ -49,7 +49,7 @@ versión contra GitHub. Sirve para probarla o para fijar una versión en un proy
 ### Respaldo: tarball de la etiqueta
 
 ```sh
-npm i -g https://codeload.github.com/BillalbertCode/captura-cli/tar.gz/v1.0.0
+npm i -g https://codeload.github.com/BillalbertCode/captura-cli/tar.gz/v1.0.1
 ```
 
 No clona con git y no necesita `--install-links`, pero instala el repo completo (`src/`, `test/`, `docs/`), no solo
@@ -82,9 +82,10 @@ Entre versiones, `dist/` no se versiona en `main`; `npm install` en el repo lo c
 ## Uso desde un script
 
 ```js
+// prueba.mjs
 import { sesion, marcar, foto, limpiar, caso } from 'captura-cli'
 
-const { page, cerrar } = await sesion('editor', { ticket: 'TAREA-12', app: 'web' })
+const { page, cerrar } = await sesion('editor', { ticket: 'TAREA-12', app: 'web' })   // app sin login: sesion(null, { ticket, app })
 await marcar(page, page.getByRole('button', { name: 'Guardar' }), 'habilitado tras el cambio')
 await foto(page, 'guardar-habilitado', { leyenda: 'El botón Guardar se habilita al completar el formulario' })
 await limpiar(page)
@@ -92,6 +93,18 @@ caso(page, { nombre: 'guardar habilitado', esperado: 'habilitado', observado: 'h
 await cerrar({ ninguna: 'verificación puntual' })
 ```
 
+```sh
+cd <el repo que se prueba>
+captura-cli script prueba.mjs [argumentos del script…]
+```
+
+- **Con la herramienta instalada en global hay que correrlo con `captura-cli script`.** `node prueba.mjs` falla con
+  `ERR_MODULE_NOT_FOUND`, porque Node no busca los paquetes globales. `captura-cli script` corre el script en el
+  mismo proceso y resuelve `captura-cli`, `captura-cli/correo` y `captura-cli/adaptadores` a la instalación que lo
+  ejecuta; si el proyecto tiene su propia copia en `node_modules`, esa gana (y entonces `node prueba.mjs` también
+  sirve). Las opciones de captura-cli (`--slot`, `--canal`, `--out`, `--config`) van antes del archivo; lo que va
+  después es del script. El código de salida, el tope de tiempo y el cierre del navegador son los de siempre.
+- Una app sin login (sin `login` en su config) se abre con `sesion(null, { app })`: sin rol, sin credenciales.
 - La primera vez en una carpeta sale con código 6 y explica cómo registrarla (`captura-cli init --yes …`).
 - Credenciales por defecto: `CAPTURA_<ROL>_USUARIO` y `CAPTURA_<ROL>_CLAVE`, en `.env` o en el entorno.
 - Correo: `import { mailpit } from 'captura-cli/correo'`.

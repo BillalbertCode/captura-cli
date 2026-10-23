@@ -47,12 +47,13 @@ export interface AdaptadorIdentificador {
 
 export interface AppConfig {
   baseUrl: string
-  login: string
+  /** Ruta de la pantalla de login. Sin ella la app no tiene login: sesion() solo la abre. */
+  login?: string
   campoUsuario?: string
   campoClave?: string
   campos?: Array<{ selector: string; valor: 'usuario' | 'clave' | 'letra' | 'numero' }>
-  boton: string
-  postLogin: string
+  boton?: string
+  postLogin?: string
   inicio?: string
   cookieSesion?: string | null
   apiBase?: string

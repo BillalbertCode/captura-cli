@@ -30,6 +30,8 @@ exige el comportamiento nuevo. Un caso «conocido, no corregido» se mantiene ig
 | `explorar(page, { errores: true })`, el paso `{ "explorar": { "errores": true } }` y `captura-cli explorar … --errores`: campos inválidos (`aria-invalid` o validación nativa, con su mensaje) y mensajes de error visibles | Validaciones silenciosas |
 | En `run`, al fallar un paso, los errores visibles se imprimen junto al `diagnostico` | `captura-cli run` |
 | Escenarios en JSON, `captura-cli validar`, `run`, `explorar` | F3 |
+| Apps sin login: una app se declara solo con `baseUrl` (sin `login`); `sesion(null, { app })` la abre en su `inicio`; el escenario no lleva `rol` y `explorar` no pide `--rol`. La original exigía login en toda app | 1.0.1 |
+| `captura-cli script <archivo> [args…]`: corre un script con `import … from 'captura-cli'` aunque la herramienta esté instalada en global. La original se importaba por ruta de archivo | 1.0.1 |
 
 ## Conocidas, no corregidas
 

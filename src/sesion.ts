@@ -23,6 +23,7 @@ export function credenciales(rol: string): Credenciales {
 // Login de una app. `campos` ([{selector, valor: usuario|letra|numero|clave}]) permite logins con el documento
 // partido; sin `campos` se usan campoUsuario/campoClave.
 async function iniciar(page: Page, a: AppConfig, c: Credenciales): Promise<void> {
+  if (!a.login || !a.boton || !a.postLogin) throw new Error('iniciar(): con login hacen falta login, boton y postLogin en la app')
   await page.goto(a.baseUrl + a.login, { waitUntil: 'domcontentloaded' })
   const campos = a.campos || [{ selector: a.campoUsuario ?? '', valor: 'usuario' as const }, { selector: a.campoClave ?? '', valor: 'clave' as const }]
   for (const f of campos) await page.locator(f.selector).fill(c[f.valor])
@@ -54,15 +55,40 @@ function elegirApp(app: string | undefined): string {
   throw new Error(`sesion(): falta { app } (${nombres.join(', ') || 'ninguna declarada en captura.config.json'})`)
 }
 
+async function abrirSinLogin(rol: string | null | undefined, nombre: string, a: AppConfig, opts: Omit<OpcionesSesion, 'app' | 'reutilizar'>): Promise<Abierto> {
+  const r = await abrir(opts)
+  fijarApp(r.page, a, nombre)
+  const e = estado(r.page)
+  e.grabar = false // abrir la app no es parte de ninguna receta
+  const destino = a.baseUrl + (a.inicio || '/')
+  try {
+    await r.page.goto(destino, { waitUntil: 'domcontentloaded' })
+  } catch (err) {
+    await r.cerrar({ ninguna: 'no se pudo abrir la app' }).catch(() => {})
+    throw new Error(`sesion(): no se pudo abrir ${destino} (${String((err as Error).message).split('\n')[0]}). ¿Está levantada la app? Ver: captura-cli entorno estado`)
+  }
+  await r.page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {})
+  e.grabar = true
+  e.ultimoPaso = `sesion ${nombre} (sin login)`
+  console.log(`sesion: ${nombre} no tiene login; abierta en ${a.inicio || '/'}${rol ? ` (el rol "${rol}" no se usa)` : ''}`)
+  console.log(`recetas disponibles de ${nombre} (usar receta(page, id) antes de escribir pasos):`)
+  await listarRecetas(nombre)
+  return r
+}
+
 // Sesión guardada por app+rol en el almacén del slot (storageState). Se reutiliza si tiene menos de `sesionMin`
 // minutos (config, 15 por defecto) y la app no redirige al login; si no, login normal y se vuelve a guardar.
 // `reutilizar: false` fuerza login. Cada llamada abre su propio navegador: una sesión por script.
 // La URL de la app la da el adaptador de entorno según el slot (CAPTURA_SLOT).
-export async function sesion(rol: string, { app, reutilizar = true, ...opts }: OpcionesSesion): Promise<Abierto> {
+// Una app SIN login (sin `login` en su config) solo se abre en su `inicio`: no hacen falta rol ni credenciales
+// (se puede pasar null) y no hay sesión que guardar.
+export async function sesion(rol: string | null | undefined, { app, reutilizar = true, ...opts }: OpcionesSesion): Promise<Abierto> {
   const c = ctx()
   const nombre = elegirApp(app)
   const cfgApp = apps[nombre]!
   const a: AppConfig = { ...cfgApp, baseUrl: c.adaptadores.entorno.url(nombre, cfgApp, c.slot) }
+  if (!a.login) return abrirSinLogin(rol, nombre, a, opts)
+  if (!rol) throw new Error(`sesion(): la app ${nombre} tiene login; falta el rol, p. ej. sesion('<rol>', { app: '${nombre}' })`)
   const cr = credenciales(rol)
   const f = join(c.rutas.sesiones, `${nombre}-${slug(rol)}.json`)
   const vigente = reutilizar && existsSync(f) && Date.now() - statSync(f).mtimeMs < c.cfg.sesionMin * 60000

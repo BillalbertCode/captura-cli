@@ -49,10 +49,11 @@ mirando imágenes**. Un PNG se abre solo si un caso falla o para validar dónde 
    [references/datos.md](references/datos.md).
 4. **Recetas:** `captura-cli recetas <app>`. Si el tramo ya es receta, se usa y no se explora.
 5. **Explorar con texto:** `captura-cli explorar /ruta --rol <rol> [--errores]` (lo interactivo con selectores; con
-   `--errores`, campos inválidos y mensajes). Recién con selectores firmes, el escenario o el script.
+   `--errores`, campos inválidos y mensajes). En una app sin login no hace falta `--rol`. Recién con selectores firmes, el escenario o el script.
 6. **Capturar y registrar casos:** un escenario (`captura-cli validar` y `run`, ver
    [references/escenarios.md](references/escenarios.md)) o un script con la API
-   ([references/api.md](references/api.md)). Una `foto` por momento que importe, no por clic.
+   ([references/api.md](references/api.md)), siempre con `captura-cli script <archivo>` y no con `node` (con la
+   herramienta instalada en global, `node` no encuentra el paquete). Una `foto` por momento que importe, no por clic.
 7. **Verificar el efecto** de cada escritura con una consulta de solo lectura.
 8. **Reportar:** la tabla de casos de `informe.md`, la carpeta `publicar/` (lo único que se sube) y qué datos quedaron
    cambiados. Nombrar los servicios que quedaron arriba.

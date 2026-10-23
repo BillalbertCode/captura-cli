@@ -24,9 +24,12 @@ Uso:
   captura-cli config                       muestra el registro, las rutas y la config efectiva del workspace
   captura-cli config <clave> <valor>       cambia salidas (global|ruta), proyecto, estadisticas (si|no)
                                            o salidas-base (ruta por defecto para workspaces nuevos)
+  captura-cli script [--slot N] <archivo.mjs> [args…]
+                                           corre un script que usa la API (import … from 'captura-cli'),
+                                           también con la herramienta instalada en global
   captura-cli validar <escenario>          revisa el escenario sin abrir el navegador (sale con 2 si no es válido)
   captura-cli run <escenario> [opciones]   valida y ejecuta el escenario; informe.md, casos.json y capturas
-  captura-cli explorar <ruta> --rol <rol> [--app <app>] [--errores]
+  captura-cli explorar <ruta> [--rol <rol>] [--app <app>] [--errores]
                                            lista lo interactivo de una pantalla con selectores sugeridos;
                                            --errores agrega campos inválidos y mensajes de error visibles
   captura-cli recetas [app]                catálogo de recetas con versión y estado
@@ -54,7 +57,7 @@ Uso:
 Opciones de run y explorar:
   --id <id>             carpeta de salida (manda sobre "id" del escenario)
   --app <app>           app del config (por defecto la única declarada)
-  --rol <rol>           rol con el que entrar (manda sobre "rol" del escenario)
+  --rol <rol>           rol con el que entrar (manda sobre "rol" del escenario; no hace falta en una app sin login)
   --browser <b>         chromium | firefox | webkit (por defecto chromium)
   --canal <c>           msedge | chrome: el navegador instalado (= CAPTURA_CANAL)
   --headless | --no-headless
@@ -198,6 +201,7 @@ async function cargarEscenario(ref: string | undefined, op: Args['op']): Promise
     const prob = c.adaptadores.identificador.validar(esc.id)
     if (prob) errores.push(`id: ${prob}`)
     const app = esc.app ?? apps[0]
+    if (app && c.cfg.apps[app]?.login && !esc.rol) errores.push(`rol: falta (la app ${app} tiene login): declarar "rol" o pasar --rol`)
     if (app) {
       const faltan = await recetasFaltantes(app, recetasDe(esc))
       if (faltan.length) errores.push(`recetas usadas que no existen para ${app}: ${faltan.join(', ')} (catálogo: captura-cli recetas ${app})`)
@@ -217,12 +221,15 @@ async function validar(ref: string | undefined, op: Args['op']): Promise<number>
 async function explorarCli(ruta: string | undefined, op: Args['op']): Promise<number> {
   if (!ruta || !/^(\/|https?:\/\/)/.test(ruta)) return salir('explorar: falta la ruta (p. ej. /inicio o una URL)', CODIGOS.ERROR)
   const rol = texto(op['rol'])
-  if (!rol) return salir('explorar: falta --rol (con qué rol entrar)', CODIGOS.ERROR)
+  const app = texto(op['app'])
+  // --rol solo hace falta si la app tiene login.
+  const nombres = Object.keys(ctx().cfg.apps)
+  const cfgApp = ctx().cfg.apps[app ?? (nombres.length === 1 ? nombres[0]! : '')]
+  if (!rol && (!cfgApp || cfgApp.login)) return salir(`explorar: falta --rol (con qué rol entrar${cfgApp ? '; la app tiene login' : '; no hace falta si la app no tiene login'})`, CODIGOS.ERROR)
   const { sesion } = await import('./sesion.js')
   const { explorar } = await import('./explorar.js')
   const { estado } = await import('./estado.js')
-  const app = texto(op['app'])
-  const { page, cerrar } = await sesion(rol, { ticket: texto(op['id']) ?? 'explorar', ...(app ? { app } : {}), ...opcionesNavegador(op) })
+  const { page, cerrar } = await sesion(rol ?? null, { ticket: texto(op['id']) ?? 'explorar', ...(app ? { app } : {}), ...opcionesNavegador(op) })
   const e = estado(page)
   e.grabar = false // explorar no es un tramo para recetas
   await page.goto(/^https?:/.test(ruta) ? ruta : (e.app?.baseUrl ?? '') + ruta, { waitUntil: 'domcontentloaded' })
@@ -365,8 +372,41 @@ async function hookCli(evento: string | undefined): Promise<number> {
   }
 }
 
+// Opciones que equivalen a variables de entorno: se aplican antes de resolver el contexto.
+function aplicarOpcionesDeEntorno(op: Args['op']): void {
+  for (const [o, v] of [['config', 'CAPTURA_CONFIG'], ['out', 'CAPTURA_OUT'], ['slot', 'CAPTURA_SLOT'], ['canal', 'CAPTURA_CANAL']] as const) {
+    const x = texto(op[o])
+    if (x !== undefined) process.env[v] = o === 'config' || o === 'out' ? resolve(x) : x
+  }
+}
+
+// ---------- scripts ----------
+
+/**
+ * captura-cli script [--slot N] [--canal c] [--out ruta] [--config ruta] <archivo.mjs> [args del script…]
+ * Lo que va después del archivo es del script; las opciones de captura-cli van antes.
+ */
+async function scriptCli(args: string[]): Promise<number> {
+  const propias: Args['op'] = {}
+  let i = 0
+  for (; i < args.length && args[i]!.startsWith('--'); i++) {
+    const [k, v] = args[i]!.slice(2).split(/=(.*)/s)
+    if (!['slot', 'canal', 'out', 'config'].includes(k!)) return salir(`script: opción desconocida --${k} antes del archivo (válidas: --slot, --canal, --out, --config); lo que va después del archivo es para el script`, CODIGOS.ERROR)
+    const valor = v ?? args[++i]
+    if (valor === undefined) return salir(`script: falta el valor de --${k}`, CODIGOS.ERROR)
+    propias[k!] = valor
+  }
+  const archivo = args[i]
+  if (!archivo) return salir('script: falta el archivo (captura-cli script [--slot N] [--canal c] [--out ruta] [--config ruta] <archivo.mjs> [args…])', CODIGOS.ERROR)
+  aplicarOpcionesDeEntorno(propias)
+  const { ejecutarScript } = await import('./script.js')
+  return ejecutarScript(archivo, args.slice(i + 1))
+}
+
 async function main(): Promise<number> {
-  const { pos, op } = parsear(process.argv.slice(2))
+  const crudo = process.argv.slice(2)
+  if (crudo[0] === 'script') return scriptCli(crudo.slice(1))
+  const { pos, op } = parsear(crudo)
   const cmd = pos[0]
   if (op['version']) { console.log(VERSION); return 0 }
   if (op['help'] || cmd === 'help' || !cmd) { console.log(AYUDA); return cmd || op['help'] ? 0 : 1 }
@@ -376,11 +416,7 @@ async function main(): Promise<number> {
   if (cmd === 'hook') return hookCli(pos[1])
   if (cmd === 'stats' && (op['todos'] || op['transcrito'])) return statsCli(op)
   if (cmd === 'doctor') return doctorCli(op)
-  // Opciones que equivalen a variables de entorno: se aplican antes de resolver el contexto.
-  for (const [o, v] of [['config', 'CAPTURA_CONFIG'], ['out', 'CAPTURA_OUT'], ['slot', 'CAPTURA_SLOT'], ['canal', 'CAPTURA_CANAL']] as const) {
-    const x = texto(op[o])
-    if (x !== undefined) process.env[v] = o === 'config' || o === 'out' ? resolve(x) : x
-  }
+  aplicarOpcionesDeEntorno(op)
   await preparar()
   if (cmd === 'validar') return validar(pos[1], op)
   const c = ctx() // sale con 6 si el workspace no está registrado, con 1 si la config es inválida

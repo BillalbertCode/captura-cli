@@ -44,7 +44,7 @@ captura-cli explorar /bandeja --rol supervisor  # para hallar selectores antes d
 | `version` | `1` |
 | `id` | Carpeta de salida; tiene que cumplir el formato del proyecto (`id.patron`). `--id` manda |
 | `app` | App del config. Opcional si hay una sola. `--app` manda |
-| `rol` | Rol con el que entrar. `--rol` manda |
+| `rol` | Rol con el que entrar. `--rol` manda. **Solo hace falta si la app tiene login**; en una app sin login se omite |
 | `recetas` | Lo mismo que `cerrar()`: `{ "creadas": ["id"] }` o `{ "ninguna": "motivo" }`. Sin esto, si hubo pasos propios, sale con 5 |
 | `casos` | Cada caso va al informe: **OK** si todos sus pasos se cumplen; **FALLA** con el paso y el error si uno falla |
 

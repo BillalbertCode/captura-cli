@@ -104,3 +104,11 @@ test('7: PAGINA_COLGADA cierra el navegador y dice dónde y tras qué paso', { s
   assert.ok(r.ms < 30000, `tardó ${r.ms} ms`)
   assert.doesNotMatch(r.out, /ERROR_ESPERADO_NO_OCURRIO/)
 })
+
+test('app sin login: sesion(null) la abre en su inicio sin rol ni credenciales; con login y sin rol, error claro', { skip: falta('app-sin-login') }, async () => {
+  const r = await correr('sin-login.mjs')
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.match(r.out, /^sesion: pub no tiene login; abierta en \/publico$/m)
+  assert.ok(r.out.includes('PRUEBA url=/publico'), r.out)
+  assert.ok(r.out.includes("ok rechaza app con login sin rol: sesion(): la app zz tiene login; falta el rol, p. ej. sesion('<rol>', { app: 'zz' })"), r.out)
+})

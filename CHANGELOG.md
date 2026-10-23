@@ -1,5 +1,21 @@
 # Cambios
 
+## 1.0.1 (2026-10-23)
+
+Dos correcciones que salieron de preparar una prueba de instalación desde cero en un proyecto sin autenticación.
+
+- **Apps sin login.** Una app se declara solo con `baseUrl` (sin `login`): `sesion(null, { app })`, `captura-cli run` y
+  `captura-cli explorar` la abren en su `inicio` sin rol, sin credenciales y sin sesión guardada. En 1.0.0 la config
+  exigía `login`, `boton` y `postLogin` en toda app, y el escenario exigía `rol`. Declarar `boton`, `postLogin` o los
+  campos sin `login` es un error que lo explica; una app con login y sin rol también. Si la app no responde, el error
+  dice qué URL intentó abrir.
+- **Scripts con la instalación global.** `import … from 'captura-cli'` fallaba con `ERR_MODULE_NOT_FOUND` cuando la
+  herramienta estaba instalada en global (Node no resuelve paquetes globales). Nuevo: `captura-cli script <archivo>
+  [args…]`, que corre el script en el mismo proceso resolviendo `captura-cli`, `captura-cli/correo` y
+  `captura-cli/adaptadores` a la instalación que lo ejecuta; una copia propia del proyecto en `node_modules` gana. El
+  README y la skill ahora dicen cómo correr los scripts.
+- Node 20.6 o posterior (`module.register`).
+
 ## 1.0.0 (2026-10-22)
 
 Primera versión instalable: `npm i -g --install-links github:BillalbertCode/captura-cli#v1.0.0`.

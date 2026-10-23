@@ -18,6 +18,11 @@ export function registrarApp(baseUrl, nombre = 'zz') {
   C.apps[nombre] = appZZ(baseUrl)
 }
 
+// Una app sin login (pantalla pública del sitio de prueba): solo baseUrl e inicio.
+export function registrarAppSinLogin(baseUrl, nombre = 'pub') {
+  C.apps[nombre] = { baseUrl, inicio: '/publico', apiBase: '/api' }
+}
+
 // Una falla esperada: imprime "ok rechaza <nombre>: <mensaje>" o "ERROR_ESPERADO_NO_OCURRIO <nombre>".
 export async function rechaza(nombre, fn) {
   try { await fn(); console.log(`ERROR_ESPERADO_NO_OCURRIO ${nombre}`) } catch (e) { console.log(`ok rechaza ${nombre}: ${String(e.message).split('\n')[0].slice(0, 400)}`) }

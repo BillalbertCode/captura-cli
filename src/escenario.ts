@@ -48,7 +48,8 @@ export interface Escenario {
   version: 1
   id: string
   app?: string
-  rol: string
+  /** Con qué rol entrar. Solo hace falta si la app tiene login. */
+  rol?: string
   /** Declaración de recetas al cerrar (igual que cerrar({ creadas } | { ninguna })). */
   recetas?: { creadas?: string[]; ninguna?: string }
   casos: CasoEscenario[]
@@ -227,12 +228,12 @@ function validarPaso(p: unknown, ruta: string, e: Errores): void {
 /** Valida la estructura. Devuelve el escenario tipado o la lista de errores (todos, no solo el primero). */
 export function validarEscenario(x: unknown): { ok: true; escenario: Escenario } | { ok: false; errores: string[] } {
   const e = new Errores()
-  if (!esObjeto(x)) return { ok: false, errores: ['(raíz): un escenario es un objeto { "version": 1, "id", "rol", "casos": [...] }'] }
+  if (!esObjeto(x)) return { ok: false, errores: ['(raíz): un escenario es un objeto { "version": 1, "id", "rol" (si la app tiene login), "casos": [...] }'] }
   e.claves(x, ['$schema', 'version', 'id', 'app', 'rol', 'recetas', 'casos'], '(raíz)')
   if (x['version'] !== 1) e.add('version', 'debe ser 1')
   if (!texto(x['id'])) e.add('id', 'falta: nombre de la carpeta de salida (o pasar --id)')
   if (x['app'] !== undefined && !texto(x['app'])) e.add('app', 'el nombre de una app del config')
-  if (!texto(x['rol'])) e.add('rol', 'falta: con qué rol entrar (o pasar --rol)')
+  if (x['rol'] !== undefined && !texto(x['rol'])) e.add('rol', 'debe ser un texto no vacío (con qué rol entrar); quitar "rol" si la app no tiene login')
   const rec = x['recetas']
   if (rec !== undefined) {
     if (!esObjeto(rec)) e.add('recetas', '{ "creadas": ["id"] } o { "ninguna": "motivo" }')

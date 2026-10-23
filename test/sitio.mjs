@@ -36,6 +36,9 @@ export function sitio({ puerto = 0 } = {}) {
       <span id="rif-ayuda">9 dígitos</span><button id="consultar">Consultar</button><p id="msg" class="campo-error"></p>
       <script>document.getElementById('consultar').addEventListener('click',()=>{const r=document.getElementById('rif');
         if(!r.checkValidity()){r.setAttribute('aria-invalid','true');document.getElementById('msg').textContent='El RIF debe tener 9 dígitos'}})</script>`,
+    // Una app sin login: pantalla pública con un contador.
+    '/publico': `<h1>Publico</h1><p>Esta pantalla no pide login.</p><button id="contar">Contar</button> <span id="n">0</span>
+      <script>document.getElementById('contar').addEventListener('click',()=>{const n=document.getElementById('n');n.textContent=Number(n.textContent)+1})</script>`,
     // El backend de la app falla (503): la pantalla se queda cargando.
     '/roto': `${guardia}<h1>Reportes</h1><p id="estado">Cargando datos…</p><script>setTimeout(()=>fetch('/api/falla'),300)</script>`,
   }

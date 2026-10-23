@@ -89,7 +89,7 @@ test('validarEscenario: todos los errores, con ruta, sugerencia y forma correcta
   for (const x of [
     'version: debe ser 1',
     'id: falta: nombre de la carpeta de salida (o pasar --id)',
-    'rol: falta: con qué rol entrar (o pasar --rol)',
+    'rol: debe ser un texto no vacío (con qué rol entrar); quitar "rol" si la app no tiene login',
     'recetas.ningun: clave desconocida; ¿quisiste decir "ninguna"?',
     'casos[0].pasos[0]: paso desconocido "volar"; pasos válidos: ir, click,',
     'casos[0].pasos[1]: paso desconocido "clik"; ¿quisiste decir "click"? forma: { "click": { "en": { "rol": "button", "nombre": "Guardar" } } }',
@@ -221,6 +221,56 @@ test('F4: explorar con errores muestra la validación silenciosa (campo inválid
   const sinErrores = await correr(['explorar', '/form2', '--rol', 'zz', '--errores', '--sin-sesion'])
   assert.equal(sinErrores.code, 0, sinErrores.err)
   assert.match(sinErrores.out, /^errores: ninguno visible$/m)
+})
+
+test('app con login: un escenario sin rol y explorar sin --rol son un error que lo dice', async () => {
+  const f = escribir('sin-rol.json', { version: 1, id: 'PRUEBA-SR', casos: [{ nombre: 'c', pasos: [{ ir: '/home' }] }] })
+  const r = await correr(['validar', f], 30000)
+  assert.equal(r.code, 2, r.out + r.err)
+  assert.match(r.err, /- rol: falta \(la app zz tiene login\): declarar "rol" o pasar --rol/)
+  const e = await correr(['explorar', '/home'], 30000)
+  assert.equal(e.code, 1)
+  assert.match(e.err, /explorar: falta --rol \(con qué rol entrar; la app tiene login\)/)
+})
+
+test('app sin login: la config vale con solo baseUrl; run, validar y explorar no piden rol ni credenciales', async () => {
+  const cfg = join(proy, 'sin-login.config.json')
+  writeFileSync(cfg, JSON.stringify({ apps: { pub: { baseUrl: s.url, inicio: '/publico', apiBase: '/api' } } }))
+  const f = escribir('publico.json', {
+    version: 1, id: 'PRUEBA-PUB', recetas: { ninguna: 'prueba' },
+    casos: [{
+      nombre: 'contador', esperado: 'el contador sube a 1',
+      pasos: [
+        { esperar: 'Publico' },
+        { click: { en: { rol: 'button', nombre: 'Contar' } } },
+        { comprobar: { en: { css: '#n' }, texto: '1' } },
+        { marcar: { en: { css: '#n' }, etiqueta: 'Cuenta 1' } },
+        { foto: { descripcion: 'contador', leyenda: 'El contador sube a 1' } },
+        { limpiar: true },
+      ],
+    }],
+  })
+  let r = await correr(['validar', f, '--config', cfg], 30000)
+  assert.equal(r.code, 0, r.out + r.err)
+  r = await correr(['run', f, '--config', cfg])
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.match(r.out, /^sesion: pub no tiene login; abierta en \/publico$/m)
+  assert.match(r.out, /^resultado: 1 de 1 caso\(s\) OK$/m)
+  assert.doesNotMatch(r.out + r.err, /FALTAN_CREDENCIALES/)
+  const md = readFileSync(r.out.match(/^informe: (.+informe\.md)/m)[1], 'utf8')
+  assert.match(md, /^\| contador \| el contador sube a 1 \| todos los pasos se cumplieron \| OK \| \.\/step\d{2}-contador\.png \|$/m)
+  r = await correr(['explorar', '/publico', '--config', cfg])
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.match(r.out, /^explorar \/publico \| títulos: Publico$/m)
+  assert.ok(r.out.includes('  button "Contar"'), r.out)
+})
+
+test('app sin login que no responde: el error dice qué intentó abrir y cómo revisar', async () => {
+  const cfg = join(proy, 'sin-login-caida.config.json')
+  writeFileSync(cfg, JSON.stringify({ apps: { pub: { baseUrl: 'http://localhost:1', inicio: '/' } } }))
+  const r = await correr(['explorar', '/', '--config', cfg], 60000)
+  assert.equal(r.code, 1, r.out + r.err)
+  assert.match(r.err, /sesion\(\): no se pudo abrir http:\/\/localhost:1\/ \(.*\)\. ¿Está levantada la app\? Ver: captura-cli entorno estado/)
 })
 
 test('explorar (CLI): lista lo interactivo de la ruta con selectores, sin dejar recetas candidatas', async () => {

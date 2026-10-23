@@ -26,6 +26,8 @@ captura-cli run flujo --rol supervisor   # por nombre, desde la carpeta de escen
 }
 ```
 
+`rol` solo hace falta si la app tiene login; en una app sin login se omite (y `explorar` tampoco pide `--rol`).
+
 **Pasos:** `ir`, `click`, `llenar`, `elegir`, `esperar`, `esperarExito`, `esperarToast`, `esperarHabilitado`,
 `comprobar` (aserción: `visible`, `texto`, `habilitado`), `marcar`, `limpiar`, `foto`, `cambio`, `api` (con
 `status` falla si difiere), `receta`, `explorar` (con `errores`).

@@ -1,7 +1,17 @@
 # API de código
 
 Para lo que un escenario no cubre. Un script corto y descartable por fase, en la carpeta temporal del agente, corrido
-con tope: `timeout 300 node <script>.mjs`.
+**desde el repo que se prueba** (el workspace sale de la carpeta actual) y con tope:
+
+```sh
+timeout 300 captura-cli script prueba.mjs [argumentos del script…]
+```
+
+**Usar `captura-cli script`, no `node`.** Con `captura-cli` instalado en global, `node prueba.mjs` falla con
+`ERR_MODULE_NOT_FOUND` en el `import … from 'captura-cli'`; `captura-cli script` lo resuelve a la instalación que lo
+ejecuta (también `captura-cli/correo` y `captura-cli/adaptadores`). Las opciones propias (`--slot`, `--canal`,
+`--out`, `--config`) van antes del archivo; lo que va después es del script. Si el proyecto tiene su propia copia de
+captura-cli en `node_modules`, esa gana y `node` también sirve.
 
 ```js
 import { sesion, foto, marcar, limpiar, esperarTexto, api, caso, diagnostico } from 'captura-cli'
@@ -18,7 +28,7 @@ await cerrar({ ninguna: 'verificación puntual' })   // informe.md, casos.json, 
 
 | Función | Para qué |
 |---|---|
-| `sesion(rol, { ticket, app, reutilizar })` | Login con sesión guardada por app y rol (vale `sesionMin` minutos, 15 por defecto, si la app no manda al login). Cambiar de rol no repite el login del otro. `reutilizar: false` fuerza el login. Los logins con varios campos (documento partido en letra y número) se declaran con `campos` en la config. Imprime el catálogo de recetas |
+| `sesion(rol, { ticket, app, reutilizar })` | **App sin login** (sin `login` en su config): `sesion(null, { ticket, app })` la abre en su `inicio`, sin rol ni credenciales. **App con login:** login con sesión guardada por app y rol (vale `sesionMin` minutos, 15 por defecto, si la app no manda al login). Cambiar de rol no repite el login del otro. `reutilizar: false` fuerza el login. Los logins con varios campos (documento partido en letra y número) se declaran con `campos` en la config. Imprime el catálogo de recetas |
 | `abrir({ ticket, browser, headless, viewport, subcarpeta, maxMs })` | Navegador sin login. `maxMs` (5 min) es el tope: código 4 |
 | `marcar(page, locator, texto, { lado, numero })` | Óvalo y etiqueta rojos (`abajo`, `arriba`, `izq`, `der`, `dentro`). Se marca el contenedor completo del aviso, no solo el título. Con `position:fixed`: no altera la página y deja la captura lista para que el usuario agregue flechas encima |
 | `foto(page, descripcion, { leyenda, sinMarca, completa })` | Captura del **viewport** (no página completa: corta sidebar y header fijos) con «Paso NN · leyenda» dentro de la imagen. Vuelve a medir las marcas antes de capturar; si un elemento ya no está o quedó fuera, falla con texto. Imprime `marca N "texto" en (x,y) WxH …; contenido: "…"`: con eso se valida sin abrir el PNG |

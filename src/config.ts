@@ -91,12 +91,23 @@ function sinDesconocidas(o: Record<string, unknown>, validas: readonly string[],
 
 function validarApp(n: string, a: unknown, archivo: string): AppConfig {
   const p = `apps.${n}`
-  exigir(esObjeto(a), archivo, p, 'un objeto { baseUrl, login, boton, postLogin, … }')
+  exigir(esObjeto(a), archivo, p, 'un objeto { baseUrl, login, boton, postLogin, … } (solo { baseUrl } si la app no tiene login)')
   exigir(typeof a['baseUrl'] === 'string' && /^https?:\/\/[^/]+/.test(a['baseUrl']), archivo, `${p}.baseUrl`, 'una URL http(s)://host[:puerto]')
-  for (const k of ['login', 'boton', 'postLogin'] as const) exigir(typeof a[k] === 'string' && a[k] !== '', archivo, `${p}.${k}`, 'un texto no vacío')
+  // Con `login` (la ruta de la pantalla de login) hacen falta boton, postLogin y los campos; sin él la app no tiene
+  // login y esas claves no tienen sentido (probablemente falta `login`).
+  const tieneLogin = a['login'] !== undefined
+  if (tieneLogin) {
+    for (const k of ['login', 'boton', 'postLogin'] as const) exigir(texto(a[k]), archivo, `${p}.${k}`, 'un texto no vacío')
+  } else {
+    for (const k of ['boton', 'postLogin', 'campos', 'campoUsuario', 'campoClave'] as const) {
+      if (a[k] !== undefined) throw new ConfigInvalida(`CONFIG_INVALIDA: ${archivo}: "${p}.${k}" solo tiene sentido con "${p}.login" (la ruta de la pantalla de login): declararlo, o quitar "${p}.${k}" si la app no tiene login`)
+    }
+  }
   for (const k of ['campoUsuario', 'campoClave', 'inicio', 'apiBase'] as const) exigir(a[k] === undefined || typeof a[k] === 'string', archivo, `${p}.${k}`, 'un texto')
   exigir(a['cookieSesion'] === undefined || a['cookieSesion'] === null || typeof a['cookieSesion'] === 'string', archivo, `${p}.cookieSesion`, 'el nombre de una cookie o null')
-  if (a['campos'] !== undefined) {
+  if (!tieneLogin) {
+    // sin login no hay campos que validar
+  } else if (a['campos'] !== undefined) {
     const cs = a['campos']
     exigir(Array.isArray(cs) && cs.length > 0, archivo, `${p}.campos`, 'una lista [{ "selector": "…", "valor": "usuario|clave|letra|numero" }]')
     cs.forEach((c: unknown, i: number) => {

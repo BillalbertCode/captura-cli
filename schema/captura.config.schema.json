@@ -100,10 +100,11 @@
     },
     "app": {
       "type": "object",
-      "required": ["baseUrl", "login", "boton", "postLogin"],
+      "description": "Con `login` hacen falta boton, postLogin y los campos; sin `login` la app no tiene login y solo se declara baseUrl.",
+      "required": ["baseUrl"],
       "properties": {
         "baseUrl": { "type": "string", "pattern": "^https?://[^/]+" },
-        "login": { "description": "Ruta de la pantalla de login, p. ej. /login", "type": "string", "minLength": 1 },
+        "login": { "description": "Ruta de la pantalla de login, p. ej. /login. Sin ella la app no tiene login.", "type": "string", "minLength": 1 },
         "campoUsuario": { "type": "string" },
         "campoClave": { "type": "string" },
         "campos": {
@@ -125,10 +126,17 @@
         "cookieSesion": { "description": "Cookie con el token que api() manda como Bearer; null si la sesión viaja solo en cookies", "type": ["string", "null"] },
         "apiBase": { "type": "string" }
       },
-      "anyOf": [
-        { "required": ["campos"] },
-        { "required": ["campoUsuario", "campoClave"] }
-      ]
+      "if": { "required": ["login"] },
+      "then": {
+        "required": ["boton", "postLogin"],
+        "anyOf": [
+          { "required": ["campos"] },
+          { "required": ["campoUsuario", "campoClave"] }
+        ]
+      },
+      "else": {
+        "not": { "anyOf": [{ "required": ["boton"] }, { "required": ["postLogin"] }, { "required": ["campos"] }, { "required": ["campoUsuario"] }, { "required": ["campoClave"] }] }
+      }
     }
   }
 }

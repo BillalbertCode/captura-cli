@@ -59,6 +59,21 @@ test('errores accionables: clave desconocida, heredada, typo y forma', () => {
   assert.equal(error({ apps: { web: { ...app, repoFront: 'web' } } }), '')
 })
 
+test('app sin login: basta con baseUrl; boton, postLogin o campos sin login son un error que lo explica', () => {
+  const c = normalizar({ apps: { pub: { baseUrl: 'http://localhost:3000', inicio: '/home', apiBase: '/api' } } }, 'x.json')
+  assert.equal(c.apps.pub.login, undefined)
+  assert.equal(c.apps.pub.inicio, '/home')
+  for (const k of ['boton', 'postLogin', 'campoUsuario', 'campoClave']) {
+    assert.match(error({ apps: { pub: { baseUrl: 'http://localhost:3000', [k]: 'x' } } }), new RegExp(`"apps\\.pub\\.${k}" solo tiene sentido con "apps\\.pub\\.login" \\(la ruta de la pantalla de login\\): declararlo, o quitar`))
+  }
+  assert.match(error({ apps: { pub: { baseUrl: 'http://localhost:3000', campos: [{ selector: '#u', valor: 'usuario' }] } } }), /"apps\.pub\.campos" solo tiene sentido con/)
+  // Un typo de «login» no pasa en silencio, y un login vacío tampoco.
+  assert.match(error({ apps: { pub: { baseUrl: 'http://localhost:3000', logn: '/l' } } }), /clave desconocida "apps\.pub\.logn": ¿quisiste decir "apps\.pub\.login"\?/)
+  assert.match(error({ apps: { pub: { baseUrl: 'http://localhost:3000', login: '' } } }), /"apps\.pub\.login" debe ser un texto no vacío/)
+  // Con login, todo sigue exigiéndose.
+  assert.match(error({ apps: { web: { baseUrl: 'http://localhost:3000', login: '/l' } } }), /"apps\.web\.boton" debe ser un texto no vacío/)
+})
+
 test('config inválido: la API y el CLI salen con 1 y el texto exacto', () => {
   const casa = carpeta('casa'), ws = carpeta('ws'), proy = carpeta('proy')
   assert.equal(correr(['init', '--yes', '--salidas', 'global', '--proyecto', proy, '--estadisticas', 'no'], { cwd: ws, casa }).status, 0)

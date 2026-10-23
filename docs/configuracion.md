@@ -78,14 +78,30 @@ versionado no se toca) y se avisa una vez.
 | Clave | Obligatoria | Qué es |
 |---|---|---|
 | `baseUrl` | sí | `http(s)://host[:puerto]`. Con slots, el adaptador de entorno la ajusta |
-| `login` | sí | Ruta de la pantalla de login |
-| `campoUsuario`, `campoClave` | sí, salvo que haya `campos` | Selectores de los campos |
+| `login` | no | Ruta de la pantalla de login. **Sin ella, la app no tiene login** (ver abajo) |
+| `campoUsuario`, `campoClave` | con `login`, salvo que haya `campos` | Selectores de los campos |
 | `campos` | no | Login con varios campos: `[{ "selector": "…", "valor": "usuario\|clave\|letra\|numero" }]`. `letra` y `numero` parten un usuario como `A-12345` |
-| `boton` | sí | Nombre accesible del botón de entrar |
-| `postLogin` | sí | Patrón de URL que confirma el login |
-| `inicio` | no | Ruta para comprobar una sesión guardada (por defecto `/`) |
+| `boton` | con `login` | Nombre accesible del botón de entrar |
+| `postLogin` | con `login` | Patrón de URL que confirma el login |
+| `inicio` | no | Ruta donde se abre la app (y con la que se comprueba una sesión guardada). Por defecto `/` |
 | `cookieSesion` | no | Cookie con el token que `api()` manda como `Bearer`. `null` o sin declarar: `api()` usa las cookies del navegador |
 | `apiBase` | no | Prefijo de las rutas de `api()` |
+
+### Una app sin login
+
+Una app sin autenticación se declara solo con `baseUrl` (y, si hace falta, `inicio` y `apiBase`):
+
+```json
+{ "apps": { "web": { "baseUrl": "http://localhost:5173", "inicio": "/", "apiBase": "/api" } } }
+```
+
+- `sesion(null, { app })` (en un script) y `captura-cli run` / `explorar` la abren en su `inicio`: no piden rol, no
+  usan credenciales y no guardan sesión. Un escenario de una app sin login no lleva `rol`, y `explorar` no necesita
+  `--rol`.
+- `boton`, `postLogin`, `campos`, `campoUsuario` y `campoClave` solo tienen sentido con `login`: declararlos sin él es
+  un error que lo dice (casi siempre falta `login`).
+- Si la app no responde, el error dice qué URL se intentó abrir y que se revise con `captura-cli entorno estado`.
+- En una app **con** login, falta de rol es un error claro: `sesion(): la app web tiene login; falta el rol`.
 
 Se permiten claves propias dentro de una app (por ejemplo, datos que lee un adaptador de entorno), salvo que se
 parezcan a una conocida: `botton` es un error que sugiere `boton`.

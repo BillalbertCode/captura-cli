@@ -113,7 +113,7 @@ const tipoDe = (p: Paso): string => Object.keys(p)[0] ?? '?'
 
 /** Ejecuta el escenario. Devuelve el código de salida (0, 1 si algún caso falló, o 5 si faltó declarar recetas). */
 export async function ejecutarEscenario(esc: Escenario, o: OpcionesRun = {}): Promise<number> {
-  const { page, cerrar } = await sesion(esc.rol, {
+  const { page, cerrar } = await sesion(esc.rol ?? null, {
     ticket: esc.id,
     ...(esc.app ? { app: esc.app } : {}),
     ...(o.browser ? { browser: o.browser } : {}),

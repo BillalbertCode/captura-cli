@@ -13,6 +13,7 @@ import { recetasFaltantes } from './recetas.js'
 import { dirWorkspace, guardarConfigUsuario, home, leerConfigUsuario, leerRegistro, propuesta, raizWorkspace } from './almacen.js'
 import { ctx, hayContexto, preparar } from './contexto.js'
 import { CODIGOS, salir } from './salida.js'
+import { sinConversionMsys } from './msys.js'
 import { iniciarLibro } from './uso.js'
 import { VERSION } from './version.js'
 import { mensajeWorkspaceNuevo, registrar } from './workspace.js'
@@ -218,8 +219,11 @@ async function validar(ref: string | undefined, op: Args['op']): Promise<number>
   return CODIGOS.OK
 }
 
-async function explorarCli(ruta: string | undefined, op: Args['op']): Promise<number> {
-  if (!ruta || !/^(\/|https?:\/\/)/.test(ruta)) return salir('explorar: falta la ruta (p. ej. /inicio o una URL)', CODIGOS.ERROR)
+async function explorarCli(rutaCruda: string | undefined, op: Args['op']): Promise<number> {
+  const ruta = rutaCruda === undefined ? undefined : sinConversionMsys(rutaCruda)
+  if (!ruta || !/^(\/|https?:\/\/)/.test(ruta)) {
+    return salir(`explorar: falta la ruta (p. ej. /inicio o una URL)${process.platform === 'win32' ? '. En Git Bash, un argumento que empieza con "/" se convierte en una ruta de Windows: usar MSYS_NO_PATHCONV=1 o una URL completa' : ''}`, CODIGOS.ERROR)
+  }
   const rol = texto(op['rol'])
   const app = texto(op['app'])
   // --rol solo hace falta si la app tiene login.

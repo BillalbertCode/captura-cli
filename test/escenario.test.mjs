@@ -265,6 +265,32 @@ test('app sin login: la config vale con solo baseUrl; run, validar y explorar no
   assert.ok(r.out.includes('  button "Contar"'), r.out)
 })
 
+test('Git Bash: `/ruta` llega como C:/…/Git/ruta y se deshace; otras rutas de Windows no se tocan', async () => {
+  const { sinConversionMsys } = await import('../dist/msys.js')
+  const bash = { MSYSTEM: 'MINGW64', EXEPATH: 'C:\\Users\\yo\\AppData\\Local\\Programs\\Git\\bin' }
+  assert.equal(sinConversionMsys('C:/Users/yo/AppData/Local/Programs/Git/bandeja', bash, 'win32'), '/bandeja')
+  assert.equal(sinConversionMsys('C:/Users/yo/AppData/Local/Programs/Git/', bash, 'win32'), '/')
+  assert.equal(sinConversionMsys('C:\\Users\\yo\\AppData\\Local\\Programs\\Git\\a\\b', bash, 'win32'), '/a/b')
+  assert.equal(sinConversionMsys('C:/otra/carpeta/x', bash, 'win32'), 'C:/otra/carpeta/x')
+  assert.equal(sinConversionMsys('/bandeja', bash, 'win32'), '/bandeja')
+  assert.equal(sinConversionMsys('C:/Users/yo/AppData/Local/Programs/Git/bandeja', { EXEPATH: bash.EXEPATH }, 'win32'), 'C:/Users/yo/AppData/Local/Programs/Git/bandeja', 'sin MSYSTEM no es Git Bash')
+  assert.equal(sinConversionMsys('C:/Users/yo/AppData/Local/Programs/Git/bandeja', bash, 'linux'), 'C:/Users/yo/AppData/Local/Programs/Git/bandeja')
+  assert.equal(sinConversionMsys('https://x.y/z', bash, 'win32'), 'https://x.y/z')
+  // Con el CLI: la ruta convertida funciona como /publico.
+  if (process.platform !== 'win32') return
+  const cfg = join(proy, 'sin-login-msys.config.json')
+  writeFileSync(cfg, JSON.stringify({ apps: { pub: { baseUrl: s.url } } }))
+  const r = await new Promise((ok) => {
+    const p = spawn(process.execPath, [cli, 'explorar', 'C:/Git/publico', '--config', cfg], { cwd: ws, env: { ...env, MSYSTEM: 'MINGW64', EXEPATH: 'C:\\Git\\bin' }, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true })
+    let out = '', err = ''
+    p.stdout.on('data', (d) => { out += d })
+    p.stderr.on('data', (d) => { err += d })
+    p.on('close', (code) => ok({ code, out, err }))
+  })
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.match(r.out, /^explorar \/publico \| títulos: Publico$/m)
+})
+
 test('app sin login que no responde: el error dice qué intentó abrir y cómo revisar', async () => {
   const cfg = join(proy, 'sin-login-caida.config.json')
   writeFileSync(cfg, JSON.stringify({ apps: { pub: { baseUrl: 'http://localhost:1', inicio: '/' } } }))

@@ -19,6 +19,9 @@
   `explorar` con `errores` lista los campos inválidos (con su patrón y mensaje) y los mensajes de error.
 - **`AVISO_5XX`:** el servidor de la app falló (p. ej. la base sin conexiones). No es un selector roto: reportarlo
   como problema del entorno.
+- **Git Bash en Windows convierte los argumentos que empiezan con `/`** en rutas de Windows (`/bandeja` llega como
+  `C:/…/Git/bandeja`). `captura-cli explorar` lo deshace; en cualquier otro comando con una ruta de la app, usar
+  `MSYS_NO_PATHCONV=1` delante o una URL completa.
 - **Un click que «no hace nada»:** leer el componente; el handler puede estar en otro botón.
 - **Paneles que no son `role=dialog`:** ubicarlos por su contenido (`dentro` en el escenario, `locator(...).filter`
   en un script).

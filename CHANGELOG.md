@@ -14,6 +14,9 @@ Dos correcciones que salieron de preparar una prueba de instalación desde cero 
   [args…]`, que corre el script en el mismo proceso resolviendo `captura-cli`, `captura-cli/correo` y
   `captura-cli/adaptadores` a la instalación que lo ejecuta; una copia propia del proyecto en `node_modules` gana. El
   README y la skill ahora dicen cómo correr los scripts.
+- **Git Bash en Windows.** `captura-cli explorar /ruta` fallaba: Git Bash convierte un argumento que empieza con `/`
+  en una ruta de Windows (`/bandeja` llegaba como `C:/…/Git/bandeja`). El CLI deshace esa conversión (solo si el
+  prefijo es exactamente la raíz de Git) y el error, si la ruta sigue mal, nombra el motivo y `MSYS_NO_PATHCONV=1`.
 - Node 20.6 o posterior (`module.register`).
 
 ## 1.0.0 (2026-10-22)

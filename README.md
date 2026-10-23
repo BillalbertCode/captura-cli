@@ -57,19 +57,17 @@ No clona con git y no necesita `--install-links`, pero instala el repo completo 
 
 ### Estado de la verificación
 
-Probado contra GitHub el 2026-10-21 (npm 10.9.8, Node 22, Windows) sobre el commit de release, con `--prefix` en
-una carpeta temporal:
+Probado contra GitHub (npm 10.9.8, Windows), con `--prefix` en una carpeta temporal:
 
 | Vía | Resultado |
 |---|---|
-| `npm i -g --install-links github:…` | Funciona: carpeta real, Playwright instalado, `--version` → `1.0.0` |
-| `npm i -g github:…` (sin el flag) | Falla: enlace al clon temporal, `MODULE_NOT_FOUND` |
-| `npx --yes github:…` | Funciona: `1.0.0` |
-| `npm i github:…` (local) | Funciona: `1.0.0` |
-| `npm i -g <tarball de codeload>` | Funciona: `1.0.0` |
-| `npm i -g --install-links github:…#release/v1.0.0` en el global real (nvm4w) | Funciona: `captura-cli` en el PATH, `--version` → `1.0.0`, sale con 6 en una carpeta nueva |
+| `npm i -g --install-links github:…#v1.0.1` (2026-10-23) | Funciona: carpeta real, Playwright instalado, `--version` → `1.0.1` |
+| Con esa copia: `doctor`, `init`, una app sin login declarada solo con `baseUrl`, `captura-cli script` con `import … from 'captura-cli'` y `captura-cli explorar /` desde Git Bash | Funciona: informe y captura generados |
+| `npm i -g github:…` (sin el flag) | Falla: enlace al clon temporal, `MODULE_NOT_FOUND` (2026-10-21) |
+| `npx --yes github:…`, `npm i github:…` (local) y `npm i -g <tarball de codeload>` | Funcionaron con la 1.0.0 (2026-10-21) |
+| `npm i -g --install-links github:…#release/v1.0.0` en el global real (nvm4w) | Funcionó con la 1.0.0: `captura-cli` en el PATH, sale con 6 en una carpeta nueva |
 
-No verificado: macOS y Linux.
+No verificado: macOS y Linux; la 1.0.1 con `npx`, `npm i` local y el tarball (solo se probó la instalación global).
 
 ### Cómo se publica una versión (mantenedores)
 

@@ -53,6 +53,8 @@ export interface Registro {
 export interface ConfigUsuario {
   /** Ruta base por defecto para las salidas de cada workspace nuevo (se vuelve a preguntar en cada uno). */
   salidasBase?: string
+  /** Ya se preguntó la ruta base (la primera vez en la máquina); no se vuelve a preguntar. */
+  salidasBasePreguntada?: boolean
 }
 
 export const dirWorkspace = (raiz: string): string => join(home(), 'workspaces', idWorkspace(raiz))

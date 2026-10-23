@@ -20,6 +20,21 @@ De mayor a menor: variable de entorno > `captura.config.json` > registro del wor
 | `CAPTURA_RECETAS` | `rutas.recetas` |
 | `CAPTURA_SLOT` | El slot de la corrida (`N` o `auto`; por defecto 0) |
 | `CAPTURA_CANAL` | El navegador: `msedge` o `chrome` instalado en lugar del Chromium de Playwright |
+| `CAPTURA_INTERACTIVO` | `0`: nunca preguntar (sale con 6 y las preguntas, como con un agente). `1`: preguntar leyendo la entrada aunque no sea una terminal (respuestas por tubería). Sin definir: pregunta solo si hay terminal |
+
+### Primer uso de un workspace
+
+Un workspace es la raíz del repo git (o la carpeta, si no hay git); los worktrees cuentan como el mismo. Se configura
+una vez:
+
+- **Con una persona en la terminal**, cualquier comando que necesite el workspace (`run`, `validar`, `explorar`,
+  `recetas`, `config`, `script`, …) ofrece configurarlo y sigue: dónde van las salidas, dónde viven la config, los
+  adaptadores y las recetas, y si registrar estadísticas. La primera vez en la máquina pregunta además una carpeta base
+  para las salidas de todos los workspaces (`captura-cli config salidas-base <ruta>` la cambia después). Si dices que
+  no, o cancelas con Ctrl+C, no se guarda nada y el comando sale con 6.
+- **Sin terminal** (un agente), no pregunta: sale con el código 6 `WORKSPACE_NUEVO`, imprime las preguntas y el comando
+  `captura-cli init --yes --salidas global --proyecto "<ruta>" --estadisticas si`.
+- `doctor` y los hooks del plugin nunca preguntan: solo informan.
 
 ## captura.config.json
 

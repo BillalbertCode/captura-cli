@@ -52,7 +52,7 @@ export async function revisar({ instalar = false }: { instalar?: boolean } = {})
   const raiz = raizWorkspace()
   await preparar()
   if (!hayContexto()) {
-    out.push({ estado: 'AVISO', que: `workspace ${raiz} sin registrar (o con la config inválida)`, arreglo: 'captura-cli config   (muestra qué falta y cómo registrarlo)' })
+    out.push({ estado: 'AVISO', que: `workspace ${raiz} sin registrar (o con la config inválida)`, arreglo: 'captura-cli init   (registra esta carpeta; cualquier otro comando también lo ofrece en una terminal)' })
     return out
   }
   const c = ctx()

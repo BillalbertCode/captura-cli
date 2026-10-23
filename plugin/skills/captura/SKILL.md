@@ -41,7 +41,8 @@ mirando imágenes**. Un PNG se abre solo si un caso falla o para validar dónde 
 ## Flujo
 
 1. **Id** de la tarea (de la rama o del MR; si no hay, preguntar). Si sale `WORKSPACE_NUEVO` (código 6), hacerle al
-   usuario las preguntas que imprime y ejecutar el `captura-cli init --yes …` que propone.
+   usuario las preguntas que imprime y ejecutar el `captura-cli init --yes …` que propone (un agente no tiene
+   teclado: la herramienta solo le pregunta por sí misma a una persona en una terminal).
 2. **Servicios:** `captura-cli entorno estado`; si falta algo, `captura-cli entorno levantar <app>` (ver
    [references/entorno.md](references/entorno.md)). Se dejan arriba al terminar.
 3. **Precondiciones** de solo lectura: qué rol, qué datos de prueba, en qué estado. Si falta algo que no se debe

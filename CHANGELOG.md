@@ -1,5 +1,18 @@
 # Cambios
 
+## 1.1.0 (2026-10-23)
+
+Primer uso guiado: el propósito es instalar una vez en la máquina y llamarlo desde cualquier workspace.
+
+- **Un workspace sin configurar se configura al usarlo.** Con una persona en la terminal, cualquier comando que necesite
+  el workspace (`run`, `validar`, `explorar`, `recetas`, `config`, `script`, …) ofrece configurarlo y sigue con el
+  comando; antes solo `init` preguntaba y los demás salían con 6. La primera vez en la máquina pregunta además una
+  carpeta base para las salidas de todos los workspaces. Ctrl+C, decir que no o cerrar la entrada no guarda nada.
+  Sin terminal (un agente) no cambia nada: sale con 6 y las preguntas. `CAPTURA_INTERACTIVO=0|1` fuerza un modo u otro.
+- `doctor` ya no sugiere `config` sino `init` para un workspace sin registrar; `doctor` y los hooks nunca preguntan.
+- README reordenado: «Cómo se usa» (instalar una vez, usar en cualquier workspace) antes de la instalación; instalarlo
+  solo en un proyecto queda como el caso adicional.
+
 ## 1.0.1 (2026-10-23)
 
 Dos correcciones que salieron de preparar una prueba de instalación desde cero en un proyecto sin autenticación.

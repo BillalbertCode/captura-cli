@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // CLI de captura-cli. Pensado para agentes: salida en texto corto, códigos de salida estables, nunca espera stdin
 // salvo `init` en una terminal interactiva.
-import { createInterface } from 'node:readline/promises'
 import { cargarUno } from './adaptadores/cargar.js'
 import { TIPOS, type TipoAdaptador, esFaltaConfiguracion } from './adaptadores/contrato.js'
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -10,13 +9,13 @@ import { PLANTILLAS } from './plantillas.js'
 import type { OpcionesRun } from './ejecutar.js'
 import { type Escenario, recetasDe, validarEscenario } from './escenario.js'
 import { recetasFaltantes } from './recetas.js'
-import { dirWorkspace, guardarConfigUsuario, home, leerConfigUsuario, leerRegistro, propuesta, raizWorkspace } from './almacen.js'
+import { dirWorkspace, guardarConfigUsuario, home, leerConfigUsuario, leerRegistro, raizWorkspace } from './almacen.js'
 import { ctx, hayContexto, preparar } from './contexto.js'
 import { CODIGOS, salir } from './salida.js'
 import { sinConversionMsys } from './msys.js'
 import { iniciarLibro } from './uso.js'
 import { VERSION } from './version.js'
-import { mensajeWorkspaceNuevo, registrar } from './workspace.js'
+import { configurarInteractivo, hayTeclado, mensajeWorkspaceNuevo, registrar } from './workspace.js'
 
 const AYUDA = `captura-cli ${VERSION}: evidencia de lo que hizo un agente en el navegador
 
@@ -94,19 +93,14 @@ const texto = (x: string | true | undefined): string | undefined => (typeof x ==
 
 async function init(op: Args['op']): Promise<number> {
   const raiz = raizWorkspace()
-  const p = propuesta(raiz)
-  let salidas = texto(op['salidas']), proyecto = texto(op['proyecto']), est = texto(op['estadisticas'])
+  const salidas = texto(op['salidas']), proyecto = texto(op['proyecto']), est = texto(op['estadisticas'])
   if (!op['yes']) {
-    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    if (!hayTeclado()) {
       console.log(mensajeWorkspaceNuevo(raiz))
       return CODIGOS.WORKSPACE_NUEVO
     }
-    const rl = createInterface({ input: process.stdin, output: process.stdout })
-    try {
-      salidas = (await rl.question(`¿Dónde van las salidas? [global = ${p.salidasGlobal}] o una ruta: `)).trim() || 'global'
-      proyecto = (await rl.question(`¿Carpeta del proyecto (config, adaptadores, recetas)? [${p.proyecto}]: `)).trim() || p.proyecto
-      est = (await rl.question('¿Registrar estadísticas de uso locales? [si]/no: ')).trim() || 'si'
-    } finally { rl.close() }
+    // Ya lo pidió con `init`: no hace falta preguntar si quiere configurarlo.
+    return (await configurarInteractivo(raiz, { confirmar: false })) ? CODIGOS.OK : CODIGOS.WORKSPACE_NUEVO
   }
   if (est !== undefined && !['si', 'no'].includes(est)) return salir(`init: --estadisticas debe ser si o no (recibido "${est}")`, CODIGOS.ERROR)
   const { avisos } = registrar(raiz, { salidas: salidas ?? 'global', ...(proyecto ? { proyecto } : {}), estadisticas: est !== 'no' })
@@ -121,6 +115,7 @@ function cambiarConfig(clave: string, valor: string | undefined): number {
     if (!valor) return salir('config salidas-base: falta la ruta (o "ninguna" para volver al almacén)', CODIGOS.ERROR)
     const u = leerConfigUsuario()
     if (valor === 'ninguna') delete u.salidasBase; else u.salidasBase = resolve(valor)
+    u.salidasBasePreguntada = true // ya está decidido: la primera configuración no lo vuelve a preguntar
     guardarConfigUsuario(u)
     console.log(`salidas-base: ${u.salidasBase ?? '(ninguna: el almacén)'} (se propone en cada workspace nuevo; los registrados no cambian)`)
     return 0
@@ -376,6 +371,16 @@ async function hookCli(evento: string | undefined): Promise<number> {
   }
 }
 
+/**
+ * Workspace sin configurar: con una persona al teclado se ofrece configurarlo ahora y el comando sigue; si dice que no
+ * (o no hay teclado, como con un agente), sigue sin registro y el comando sale con WORKSPACE_NUEVO (6) y las preguntas.
+ */
+async function ofrecerRegistro(): Promise<void> {
+  const raiz = raizWorkspace()
+  if (leerRegistro(raiz) || !hayTeclado()) return
+  if (!(await configurarInteractivo(raiz))) return salir(mensajeWorkspaceNuevo(raiz), CODIGOS.WORKSPACE_NUEVO)
+}
+
 // Opciones que equivalen a variables de entorno: se aplican antes de resolver el contexto.
 function aplicarOpcionesDeEntorno(op: Args['op']): void {
   for (const [o, v] of [['config', 'CAPTURA_CONFIG'], ['out', 'CAPTURA_OUT'], ['slot', 'CAPTURA_SLOT'], ['canal', 'CAPTURA_CANAL']] as const) {
@@ -403,6 +408,7 @@ async function scriptCli(args: string[]): Promise<number> {
   const archivo = args[i]
   if (!archivo) return salir('script: falta el archivo (captura-cli script [--slot N] [--canal c] [--out ruta] [--config ruta] <archivo.mjs> [args…])', CODIGOS.ERROR)
   aplicarOpcionesDeEntorno(propias)
+  await ofrecerRegistro()
   const { ejecutarScript } = await import('./script.js')
   return ejecutarScript(archivo, args.slice(i + 1))
 }
@@ -421,6 +427,7 @@ async function main(): Promise<number> {
   if (cmd === 'stats' && (op['todos'] || op['transcrito'])) return statsCli(op)
   if (cmd === 'doctor') return doctorCli(op)
   aplicarOpcionesDeEntorno(op)
+  await ofrecerRegistro()
   await preparar()
   if (cmd === 'validar') return validar(pos[1], op)
   const c = ctx() // sale con 6 si el workspace no está registrado, con 1 si la config es inválida

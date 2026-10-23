@@ -10,9 +10,32 @@ de lo que hizo el agente en el navegador, para que una persona la revise en minu
 
 También corre pruebas de punta a punta bajo pedido a partir de un escenario en JSON.
 
-> Versión 1.0.0: núcleo (API de código, 22 funciones), adaptadores, workspaces, configuración, escenarios
-> (`validar`, `run`, `explorar`), `manifest.json`, avisos accionables, plugin de Claude Code, medición de tokens
-> (`stats`) y mantenimiento (`doctor`, `limpiar`). Cambios: [CHANGELOG.md](CHANGELOG.md).
+> Versión 1.1.0: núcleo (API de código, 22 funciones), adaptadores, workspaces con registro guiado, configuración,
+> escenarios (`validar`, `run`, `explorar`), `manifest.json`, avisos accionables, plugin de Claude Code, medición de
+> tokens (`stats`) y mantenimiento (`doctor`, `limpiar`). Cambios: [CHANGELOG.md](CHANGELOG.md).
+
+## Cómo se usa
+
+captura-cli se instala **una vez en la máquina** y se llama desde cualquier workspace (cualquier repo o carpeta):
+
+```sh
+npm i -g --install-links github:BillalbertCode/captura-cli#v1.1.0     # una sola vez
+cd <cualquier proyecto>
+captura-cli run mi-flujo.json                                         # o cualquier otro comando
+```
+
+- **La primera vez en un workspace**, si hay una persona en la terminal, captura-cli pregunta si configurarlo ahora
+  (dónde guardar las salidas, dónde viven la config y las recetas, si registrar estadísticas) y sigue con el comando.
+  La primera vez en la máquina pregunta además una carpeta base para las salidas de todos los workspaces. No escribe
+  nada en el repo.
+- **Un agente no tiene teclado:** ahí no pregunta. Sale con el código 6 `WORKSPACE_NUEVO` e imprime las preguntas y el
+  comando `captura-cli init --yes …`, para que el agente se las haga al usuario.
+  `CAPTURA_INTERACTIVO=0` fuerza ese comportamiento; `CAPTURA_INTERACTIVO=1` fuerza preguntar leyendo la entrada
+  (útil para dar las respuestas por tubería).
+- El workspace es la raíz del repo git (los worktrees cuentan como el mismo). Cada uno se configura una vez, se cambia
+  con `captura-cli config` y tiene sus propias salidas, sesiones y caché.
+- Instalarlo **solo en un proyecto** también se puede (`npm i -D github:BillalbertCode/captura-cli#v1.1.0` y
+  `npx captura-cli …`). Es el caso adicional: ahí los scripts corren con `node` a secas.
 
 ## Instalación
 
@@ -21,9 +44,9 @@ No se publica en npm. Se instala desde GitHub, fijando una etiqueta de versión.
 ### Global (recomendado): el comando `captura-cli` queda disponible en cualquier terminal
 
 ```sh
-npm i -g --install-links github:BillalbertCode/captura-cli#v1.0.1
+npm i -g --install-links github:BillalbertCode/captura-cli#v1.1.0
 captura-cli --version
-# 1.0.0
+# 1.1.0
 ```
 
 `--install-links` es necesario. Sin él, npm 10 instala un paquete de git en modo global como un enlace a la
@@ -39,8 +62,8 @@ dependencia. No compila nada ni necesita TypeScript.
 ### Sin instalar: `npx`
 
 ```sh
-npx --yes github:BillalbertCode/captura-cli#v1.0.1 --version
-# 1.0.0
+npx --yes github:BillalbertCode/captura-cli#v1.1.0 --version
+# 1.1.0
 ```
 
 Ejecuta la herramienta desde la caché de npm sin dejar el comando en el PATH; cada llamada vuelve a resolver la
@@ -49,7 +72,7 @@ versión contra GitHub. Sirve para probarla o para fijar una versión en un proy
 ### Respaldo: tarball de la etiqueta
 
 ```sh
-npm i -g https://codeload.github.com/BillalbertCode/captura-cli/tar.gz/v1.0.1
+npm i -g https://codeload.github.com/BillalbertCode/captura-cli/tar.gz/v1.1.0
 ```
 
 No clona con git y no necesita `--install-links`, pero instala el repo completo (`src/`, `test/`, `docs/`), no solo
@@ -103,7 +126,7 @@ captura-cli script prueba.mjs [argumentos del script…]
   sirve). Las opciones de captura-cli (`--slot`, `--canal`, `--out`, `--config`) van antes del archivo; lo que va
   después es del script. El código de salida, el tope de tiempo y el cierre del navegador son los de siempre.
 - Una app sin login (sin `login` en su config) se abre con `sesion(null, { app })`: sin rol, sin credenciales.
-- La primera vez en una carpeta sale con código 6 y explica cómo registrarla (`captura-cli init --yes …`).
+- La primera vez en un workspace, ver «Cómo se usa»: en una terminal te lo pide; un agente recibe el código 6.
 - Credenciales por defecto: `CAPTURA_<ROL>_USUARIO` y `CAPTURA_<ROL>_CLAVE`, en `.env` o en el entorno.
 - Correo: `import { mailpit } from 'captura-cli/correo'`.
 - Lo propio de un proyecto (credenciales, formato de id, servicios, publicación, correo) entra por adaptadores:

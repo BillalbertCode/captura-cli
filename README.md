@@ -84,13 +84,14 @@ Probado contra GitHub (npm 10.9.8, Windows), con `--prefix` en una carpeta tempo
 
 | Vía | Resultado |
 |---|---|
+| `npm i -g --install-links github:…#v1.1.0` (2026-10-23) | Funciona: carpeta real, `--version` → `1.1.0`; en un workspace sin configurar, un agente recibe el código 6 y una persona en una terminal real (winpty) configura y el comando continúa, sin volver a preguntar después |
 | `npm i -g --install-links github:…#v1.0.1` (2026-10-23) | Funciona: carpeta real, Playwright instalado, `--version` → `1.0.1` |
 | Con esa copia: `doctor`, `init`, una app sin login declarada solo con `baseUrl`, `captura-cli script` con `import … from 'captura-cli'` y `captura-cli explorar /` desde Git Bash | Funciona: informe y captura generados |
 | `npm i -g github:…` (sin el flag) | Falla: enlace al clon temporal, `MODULE_NOT_FOUND` (2026-10-21) |
 | `npx --yes github:…`, `npm i github:…` (local) y `npm i -g <tarball de codeload>` | Funcionaron con la 1.0.0 (2026-10-21) |
 | `npm i -g --install-links github:…#release/v1.0.0` en el global real (nvm4w) | Funcionó con la 1.0.0: `captura-cli` en el PATH, sale con 6 en una carpeta nueva |
 
-No verificado: macOS y Linux; la 1.0.1 con `npx`, `npm i` local y el tarball (solo se probó la instalación global).
+No verificado: macOS y Linux; la 1.0.1 y la 1.1.0 con `npx`, `npm i` local y el tarball (solo se probó la instalación global).
 
 ### Cómo se publica una versión (mantenedores)
 

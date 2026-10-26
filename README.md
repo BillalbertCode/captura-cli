@@ -41,6 +41,9 @@ captura-cli run mi-flujo.json                                         # o cualqu
 
 No se publica en npm. Se instala desde GitHub, fijando una etiqueta de versión.
 
+Requisitos: Node 20.6 o posterior, npm, git y acceso a GitHub. Los navegadores de Playwright se bajan aparte
+(`captura-cli doctor --instalar`). Claude Code solo hace falta para el plugin. Probado solo en Windows.
+
 ### Global (recomendado): el comando `captura-cli` queda disponible en cualquier terminal
 
 ```sh
@@ -49,7 +52,7 @@ captura-cli --version
 # 1.1.0
 ```
 
-`--install-links` es necesario. Sin él, npm 10 instala un paquete de git en modo global como un enlace a la
+`--install-links` es necesario. Sin él, npm (10 y 11) instala un paquete de git en modo global como un enlace a la
 carpeta temporal donde lo clonó; después borra esa carpeta y el comando falla con `Cannot find module …dist/cli.js`.
 Con el flag, npm empaqueta el clon y deja una carpeta real con `dist/`, `LICENSE`, `README.md` y Playwright como
 dependencia. No compila nada ni necesita TypeScript.
@@ -80,10 +83,12 @@ No clona con git y no necesita `--install-links`, pero instala el repo completo 
 
 ### Estado de la verificación
 
-Probado contra GitHub (npm 10.9.8, Windows), con `--prefix` en una carpeta temporal:
+Probado contra GitHub en Windows (npm 10.9.8 y Node 22 con la 1.0.0; npm 11.19.1 y Node 24 con la 1.0.1 y la 1.1.0),
+con `--prefix` en una carpeta temporal:
 
 | Vía | Resultado |
 |---|---|
+| «Computador nuevo» simulado con la 1.1.0 (2026-10-26): config de Claude limpia, sin claves SSH ni credenciales de git, caché de npm vacía | Funciona: `marketplace add` + `plugin install` (plugin 1.1.0), CLI desde la etiqueta, código 6, configurar y `run` con captura. Con npm 11 sigue haciendo falta `--install-links`. El hook de inicio, sin CLI, da el comando de instalación |
 | `npm i -g --install-links github:…#v1.1.0` (2026-10-23) | Funciona: carpeta real, `--version` → `1.1.0`; en un workspace sin configurar, un agente recibe el código 6 y una persona en una terminal real (winpty) configura y el comando continúa, sin volver a preguntar después |
 | `npm i -g --install-links github:…#v1.0.1` (2026-10-23) | Funciona: carpeta real, Playwright instalado, `--version` → `1.0.1` |
 | Con esa copia: `doctor`, `init`, una app sin login declarada solo con `baseUrl`, `captura-cli script` con `import … from 'captura-cli'` y `captura-cli explorar /` desde Git Bash | Funciona: informe y captura generados |
@@ -91,13 +96,17 @@ Probado contra GitHub (npm 10.9.8, Windows), con `--prefix` en una carpeta tempo
 | `npx --yes github:…`, `npm i github:…` (local) y `npm i -g <tarball de codeload>` | Funcionaron con la 1.0.0 (2026-10-21) |
 | `npm i -g --install-links github:…#release/v1.0.0` en el global real (nvm4w) | Funcionó con la 1.0.0: `captura-cli` en el PATH, sale con 6 en una carpeta nueva |
 
-No verificado: macOS y Linux; la 1.0.1 y la 1.1.0 con `npx`, `npm i` local y el tarball (solo se probó la instalación global).
+No verificado: otro computador real (solo simulado en esta máquina); bajar Chromium con `doctor --instalar` (el CDN de
+Playwright cerró la conexión desde esa red); macOS y Linux; la 1.0.1 y la 1.1.0 con `npx`, `npm i` local y el tarball (solo se probó la instalación global).
 
 ### Cómo se publica una versión (mantenedores)
 
 1. `npm run release:preparar`: crea la rama `release/v<versión>` = HEAD + `dist/` compilado, sin el script
    `prepare` y sin tocar `main` ni la carpeta de trabajo.
 2. Etiqueta `v<versión>` sobre ese commit y push de la etiqueta.
+3. Actualizar `ref` en `.claude-plugin/marketplace.json` a la etiqueta nueva y commitear en `main`; si no, el plugin
+   sigue en la versión anterior. La `url` va completa (`https://github.com/…`): la forma corta `owner/repo` clona por
+   SSH y falla en un computador sin claves de GitHub.
 
 Entre versiones, `dist/` no se versiona en `main`; `npm install` en el repo lo compila con `scripts/prepare.mjs`.
 
@@ -145,6 +154,11 @@ claude plugin install captura@captura-cli
 
 En una sesión (Claude Code 2.1.275 o posterior): `/plugin install captura --marketplace BillalbertCode/captura-cli`.
 
+Instalar el plugin **no instala el CLI**. Al abrir una sesión, el hook de inicio avisa si falta `captura-cli` y da el
+comando exacto (`npm i -g --install-links github:BillalbertCode/captura-cli#v1.1.0`); Claude lo corre con tu permiso,
+o se lo pides: «instala captura-cli». El plugin queda fijado a la etiqueta de la versión (`ref` en
+`.claude-plugin/marketplace.json`), así que su skill coincide con el CLI de esa versión.
+
 | Pieza | Qué hace |
 |---|---|
 | Skill `captura` | Reglas, flujo y códigos de salida para el agente, con `references/` (API, escenarios, recetas, datos, entorno, errores) |
@@ -152,6 +166,9 @@ En una sesión (Claude Code 2.1.275 o posterior): `/plugin install captura --mar
 | Hook de cierre (opt-in) | Con `"evidencia": { "hook": true }` en el `captura.config.json` del proyecto: si el turno tocó archivos de interfaz y no dejó evidencia posterior (un `manifest.json` con capturas y recetas declaradas), le pide al agente que la deje o que termine con `SIN_EVIDENCIA: <motivo>`. Pide una sola vez por turno |
 
 Los hooks nunca traban al agente: ante un error propio dejan seguir.
+
+## Documentación
+
 - Sin escribir código: un escenario en JSON con `captura-cli validar` y `captura-cli run`, y `captura-cli explorar`
   para hallar selectores: [docs/escenarios.md](docs/escenarios.md).
 - Configuración (`captura.config.json`, variables `CAPTURA_*`, `captura-cli config`): [docs/configuracion.md](docs/configuracion.md).

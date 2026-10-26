@@ -32,6 +32,10 @@ captura-cli run mi-flujo.json                                         # o cualqu
   comando `captura-cli init --yes …`, para que el agente se las haga al usuario.
   `CAPTURA_INTERACTIVO=0` fuerza ese comportamiento; `CAPTURA_INTERACTIVO=1` fuerza preguntar leyendo la entrada
   (útil para dar las respuestas por tubería).
+- **Salidas y proyecto son carpetas distintas.** Las *salidas* son las capturas e informes (por defecto, fuera del repo,
+  en `~/.captura-cli/`); el *proyecto* es la config, los adaptadores y las recetas. Aunque el proyecto esté dentro del
+  repo, las capturas siguen yendo a las salidas; para guardarlas ahí: `captura-cli config salidas <ruta>` (si cae
+  dentro de un repo git, se excluye por `.git/info/exclude`). `init` imprime dónde quedó cada una.
 - El workspace es la raíz del repo git (los worktrees cuentan como el mismo). Cada uno se configura una vez, se cambia
   con `captura-cli config` y tiene sus propias salidas, sesiones y caché.
 - Instalarlo **solo en un proyecto** también se puede (`npm i -D github:BillalbertCode/captura-cli#v1.1.1` y

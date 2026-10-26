@@ -2,7 +2,7 @@
 // (un agente) sale con 6 y las preguntas. Las respuestas se pasan por tubería con CAPTURA_INTERACTIVO=1.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -64,7 +64,7 @@ test('respuestas propias: carpeta base, salidas, proyecto y estadísticas; el se
   r = await correr(b, ['config'], { entrada: 'S\n\n\n\n', extra: SI })
   assert.equal(r.code, 0, r.out + r.err)
   assert.ok(!r.out.includes('Primera vez en esta máquina'))
-  assert.ok(r.out.includes(`Salidas de este workspace — Enter = ${join(resolve(base), registros(a.casa).find((x) => x.startsWith('otro-ws')))}`), r.out)
+  assert.ok(r.out.includes(`Salidas de este workspace (capturas e informes; aparte de la carpeta del proyecto) — Enter = ${join(resolve(base), registros(a.casa).find((x) => x.startsWith('otro-ws')))}`), r.out)
   const reg2 = leer(join(a.casa, 'workspaces', registros(a.casa).find((x) => x.startsWith('otro-ws')), 'workspace.json'))
   assert.ok(reg2.salidas.startsWith(resolve(base)))
   assert.equal(reg2.estadisticas, true)
@@ -133,4 +133,20 @@ test('config salidas-base fija la base y evita preguntarla después', async () =
   const s = await correr(a, ['config'], { entrada: 'S\n\n\n\n', extra: SI })
   assert.equal(s.code, 0, s.out + s.err)
   assert.ok(!s.out.includes('Primera vez en esta máquina'))
+})
+
+test('init resume dónde quedó cada cosa y avisa si las capturas NO van a la carpeta del proyecto', async () => {
+  const a = nuevo()
+  spawnSync('git', ['init', '-q'], { cwd: a.ws, timeout: 30000 })
+  const proyecto = join(a.ws, 'captura')
+  let r = await correr(a, ['init', '--yes', '--salidas', 'global', '--proyecto', proyecto])
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.match(r.out, /^salidas \(capturas e informes\): .+captures$/m)
+  assert.ok(r.out.includes(`proyecto (config, adaptadores, recetas): ${resolve(proyecto)}`), r.out)
+  assert.ok(r.out.includes(`las capturas NO van a la carpeta del proyecto sino a las salidas; para guardarlas dentro de ella: captura-cli config salidas "${join(resolve(proyecto), 'capturas')}"`), r.out)
+  // Con las salidas dentro del proyecto no hay nada que avisar.
+  r = await correr(a, ['config', 'salidas', join(proyecto, 'capturas')])
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.ok(!r.out.includes('NO van'), r.out)
+  assert.ok(readFileSync(join(a.ws, '.git', 'info', 'exclude'), 'utf8').includes('/captura/capturas/'), 'salidas dentro del repo: excluidas por .git/info/exclude')
 })

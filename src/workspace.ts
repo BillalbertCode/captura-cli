@@ -4,7 +4,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { createInterface, type Interface } from 'node:readline'
-import { type Registro, dirWorkspace, excluirDeGit, guardarConfigUsuario, guardarRegistro, home, idWorkspace, leerConfigUsuario, leerRegistro, propuesta } from './almacen.js'
+import { type Registro, dentroDe, dirWorkspace, excluirDeGit, guardarConfigUsuario, guardarRegistro, home, idWorkspace, leerConfigUsuario, leerRegistro, propuesta } from './almacen.js'
 import { VERSION } from './version.js'
 
 /** Esquema de captura.config.json para el editor (autocompletado y validación). */
@@ -15,8 +15,8 @@ export function mensajeWorkspaceNuevo(raiz: string): string {
   return [
     `WORKSPACE_NUEVO: ${raiz} no está registrado en ${home()}.`,
     'Preguntale al usuario estas tres cosas y después ejecutá el comando de abajo con sus respuestas:',
-    `  1. salidas: ¿dónde van las capturas e informes? "global" (recomendado, fuera del repo: ${p.salidasGlobal}) o una ruta propia.`,
-    `  2. proyecto: ¿dónde viven captura.config.json, adaptadores/ y recetas/? propuesto: ${p.proyecto}`,
+    `  1. salidas: ¿dónde van las capturas e informes? Es una carpeta APARTE del proyecto. "global" (recomendado, fuera del repo: ${p.salidasGlobal}) o una ruta propia.`,
+    `  2. proyecto: ¿dónde viven captura.config.json, adaptadores/ y recetas/ (no las capturas)? propuesto: ${p.proyecto}`,
     '     (una carpeta del repo si el equipo los comparte; la herramienta no escribe nada en el repo por su cuenta)',
     '  3. estadisticas: ¿registrar estadísticas de uso locales (no se envían a ningún lado)? propuesto: si',
     `captura-cli init --yes --salidas global --proyecto "${p.proyecto}" --estadisticas si`,
@@ -88,10 +88,10 @@ export async function configurarInteractivo(raiz: string, { confirmar = true }: 
       guardarConfigUsuario({ ...u, ...(r ? { salidasBase: resolve(r) } : {}), salidasBasePreguntada: true })
     }
     const p = propuesta(raiz)
-    console.log(`Salidas de este workspace — Enter = ${p.salidasGlobal}`)
+    console.log(`Salidas de este workspace (capturas e informes; aparte de la carpeta del proyecto) — Enter = ${p.salidasGlobal}`)
     const salidas = await preguntar('Ruta para otra carpeta (o Enter): ')
     if (salidas === null) return false
-    console.log(`Proyecto (captura.config.json, adaptadores, recetas) — Enter = ${p.proyecto}`)
+    console.log(`Proyecto (captura.config.json, adaptadores, recetas; sin las capturas) — Enter = ${p.proyecto}`)
     const proyecto = await preguntar('Ruta para otra carpeta (o Enter): ')
     if (proyecto === null) return false
     const est = await preguntar('¿Registrar estadísticas de uso locales (no se envían a ningún lado)? [S/n]: ')
@@ -131,6 +131,9 @@ export function registrar(raiz: string, o: OpcionesInit): { registro: Registro; 
     salidas, proyecto, estadisticas: o.estadisticas ?? true,
   }
   guardarRegistro(raiz, { ...registro, ...{ cli: VERSION } })
-  avisos.push(`workspace registrado: ${dirWorkspace(raiz)}`)
+  avisos.push(`workspace registrado: ${dirWorkspace(raiz)}`, `salidas (capturas e informes): ${salidas}`, `proyecto (config, adaptadores, recetas): ${proyecto}`)
+  if (dentroDe(raiz, proyecto) && !dentroDe(proyecto, salidas)) {
+    avisos.push(`las capturas NO van a la carpeta del proyecto sino a las salidas; para guardarlas dentro de ella: captura-cli config salidas "${join(proyecto, 'capturas')}"`)
+  }
   return { registro, avisos }
 }

@@ -45,6 +45,8 @@ export interface Registro {
   ultimoUso: string
   /** Carpeta donde caen las capturas (una subcarpeta por id). */
   salidas: string
+  /** Las salidas se eligieron como «global» (valor por defecto), no con una ruta propia de este workspace. */
+  salidasPorDefecto?: boolean
   /** Carpeta del proyecto: captura.config.json, adaptadores/, recetas/, helpers/, escenarios/. */
   proyecto: string
   estadisticas: boolean

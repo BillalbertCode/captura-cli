@@ -22,6 +22,14 @@ De mayor a menor: variable de entorno > `captura.config.json` > registro del wor
 | `CAPTURA_CANAL` | El navegador: `msedge` o `chrome` instalado en lugar del Chromium de Playwright |
 | `CAPTURA_INTERACTIVO` | `0`: nunca preguntar (sale con 6 y las preguntas, como con un agente). `1`: preguntar leyendo la entrada aunque no sea una terminal (respuestas por tubería). Sin definir: pregunta solo si hay terminal |
 
+### Qué manda en las salidas
+
+De mayor a menor: `CAPTURA_OUT`, `rutas.salidas` del `captura.config.json`, y lo registrado para el workspace. Lo
+registrado es una **ruta propia** del workspace (`captura-cli config salidas <ruta>`) o el **valor por defecto**
+(`global`: `~/.captura-cli/` o la carpeta base que fijó `captura-cli config salidas-base <ruta>`). La base global solo
+se usa como propuesta al registrar un workspace nuevo: una ruta propia siempre manda sobre ella, y cambiarla después no
+mueve los workspaces ya registrados. `captura-cli init` y `captura-cli config` imprimen cuál aplica.
+
 ### Primer uso de un workspace
 
 Un workspace es la raíz del repo git (o la carpeta, si no hay git); los worktrees cuentan como el mismo. Se configura

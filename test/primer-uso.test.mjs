@@ -141,12 +141,32 @@ test('init resume dónde quedó cada cosa y avisa si las capturas NO van a la ca
   const proyecto = join(a.ws, 'captura')
   let r = await correr(a, ['init', '--yes', '--salidas', 'global', '--proyecto', proyecto])
   assert.equal(r.code, 0, r.out + r.err)
-  assert.match(r.out, /^salidas \(capturas e informes\): .+captures$/m)
+  assert.match(r.out, /^salidas \(capturas e informes\): .+captures — valor por defecto \(almacén de la herramienta\); una ruta propia lo reemplaza$/m)
   assert.ok(r.out.includes(`proyecto (config, adaptadores, recetas): ${resolve(proyecto)}`), r.out)
   assert.ok(r.out.includes(`las capturas NO van a la carpeta del proyecto sino a las salidas; para guardarlas dentro de ella: captura-cli config salidas "${join(resolve(proyecto), 'capturas')}"`), r.out)
   // Con las salidas dentro del proyecto no hay nada que avisar.
   r = await correr(a, ['config', 'salidas', join(proyecto, 'capturas')])
   assert.equal(r.code, 0, r.out + r.err)
   assert.ok(!r.out.includes('NO van'), r.out)
+  assert.match(r.out, /^salidas \(capturas e informes\): .+capturas — ruta propia de este workspace \(manda sobre el valor global\)$/m)
+  assert.match((await correr(a, ['config'])).out, /^salidas-origen: ruta propia de este workspace \(manda sobre el valor global\)$/m)
   assert.ok(readFileSync(join(a.ws, '.git', 'info', 'exclude'), 'utf8').includes('/captura/capturas/'), 'salidas dentro del repo: excluidas por .git/info/exclude')
+})
+
+test('salidas: la global es solo el valor por defecto; se ve cuál aplica y no se pierde al cambiar otra clave', async () => {
+  const a = nuevo()
+  const base = join(raiz, 'base-origen')
+  await correr(a, ['config', 'salidas-base', base])
+  let r = await correr(a, ['init', '--yes', '--salidas', 'global', '--estadisticas', 'si'])
+  assert.equal(r.code, 0, r.out + r.err)
+  assert.ok(r.out.includes(`valor por defecto (carpeta base global ${resolve(base)}); una ruta propia lo reemplaza`), r.out)
+  r = await correr(a, ['config', 'estadisticas', 'no'])
+  assert.ok(r.out.includes('valor por defecto (carpeta base global'), 'cambiar otra clave no convierte el valor por defecto en propio: ' + r.out)
+  r = await correr(a, ['config', 'salidas', join(raiz, 'propia')])
+  assert.ok(r.out.includes('ruta propia de este workspace (manda sobre el valor global)'), r.out)
+  // Cambiar la base global después no mueve un workspace que ya tiene ruta propia.
+  await correr(a, ['config', 'salidas-base', join(raiz, 'otra-base')])
+  const c = (await correr(a, ['config'])).out
+  assert.ok(c.split(/\r?\n/).includes(`salidas: ${resolve(raiz, 'propia')}`), 'la línea salidas: sigue siendo solo la ruta')
+  assert.match(c, /^salidas-origen: ruta propia de este workspace/m)
 })

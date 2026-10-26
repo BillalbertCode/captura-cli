@@ -104,8 +104,17 @@ export async function configurarInteractivo(raiz: string, { confirmar = true }: 
 
 export interface OpcionesInit {
   salidas: string
+  /** Conserva «valor por defecto» al volver a registrar con la ruta literal (config proyecto|estadisticas). */
+  salidasPorDefecto?: boolean
   proyecto?: string
   estadisticas?: boolean
+}
+
+/** De dónde sale la carpeta de salidas: la ruta propia del workspace manda; la global es solo el valor por defecto. */
+export function origenSalidas(porDefecto: boolean): string {
+  if (!porDefecto) return 'ruta propia de este workspace (manda sobre el valor global)'
+  const base = leerConfigUsuario().salidasBase
+  return `valor por defecto (${base ? `carpeta base global ${base}` : 'almacén de la herramienta'}); una ruta propia lo reemplaza`
 }
 
 /** Registra el workspace. Devuelve el registro y avisos para imprimir (exclusiones de git agregadas). */
@@ -128,10 +137,10 @@ export function registrar(raiz: string, o: OpcionesInit): { registro: Registro; 
   const previo = leerRegistro(raiz)
   const registro: Registro = {
     version: 1, origen: raiz, nombre: idWorkspace(raiz), registrado: previo?.registrado ?? ahora, ultimoUso: ahora,
-    salidas, proyecto, estadisticas: o.estadisticas ?? true,
+    salidas, salidasPorDefecto: o.salidas === 'global' || o.salidasPorDefecto === true, proyecto, estadisticas: o.estadisticas ?? true,
   }
   guardarRegistro(raiz, { ...registro, ...{ cli: VERSION } })
-  avisos.push(`workspace registrado: ${dirWorkspace(raiz)}`, `salidas (capturas e informes): ${salidas}`, `proyecto (config, adaptadores, recetas): ${proyecto}`)
+  avisos.push(`workspace registrado: ${dirWorkspace(raiz)}`, `salidas (capturas e informes): ${salidas} — ${origenSalidas(registro.salidasPorDefecto === true)}`, `proyecto (config, adaptadores, recetas): ${proyecto}`)
   if (dentroDe(raiz, proyecto) && !dentroDe(proyecto, salidas)) {
     avisos.push(`las capturas NO van a la carpeta del proyecto sino a las salidas; para guardarlas dentro de ella: captura-cli config salidas "${join(proyecto, 'capturas')}"`)
   }

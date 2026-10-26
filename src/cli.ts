@@ -15,7 +15,7 @@ import { CODIGOS, salir } from './salida.js'
 import { sinConversionMsys } from './msys.js'
 import { iniciarLibro } from './uso.js'
 import { VERSION } from './version.js'
-import { configurarInteractivo, hayTeclado, mensajeWorkspaceNuevo, registrar } from './workspace.js'
+import { configurarInteractivo, hayTeclado, mensajeWorkspaceNuevo, origenSalidas, registrar } from './workspace.js'
 
 const AYUDA = `captura-cli ${VERSION}: evidencia de lo que hizo un agente en el navegador
 
@@ -130,6 +130,7 @@ function cambiarConfig(clave: string, valor: string | undefined): number {
   if (clave === 'estadisticas' && !['si', 'no'].includes(valor)) return salir(`config estadisticas: si o no (recibido "${valor}")`, CODIGOS.ERROR)
   const { avisos } = registrar(raiz, {
     salidas: clave === 'salidas' ? valor : r.salidas,
+    ...(clave !== 'salidas' && r.salidasPorDefecto ? { salidasPorDefecto: true } : {}),
     proyecto: clave === 'proyecto' ? valor : r.proyecto,
     estadisticas: clave === 'estadisticas' ? valor === 'si' : r.estadisticas,
   })
@@ -454,7 +455,7 @@ async function main(): Promise<number> {
     }
     console.log([
       `workspace: ${c.raiz}`, `almacén: ${dirWorkspace(c.raiz)} (CAPTURA_HOME=${home()})`,
-      `salidas: ${c.rutas.salidas}`, `proyecto: ${r?.proyecto ?? ''}`, `config: ${c.configArchivo ?? '(sin archivo: valores por defecto)'}`,
+      `salidas: ${c.rutas.salidas}`, `salidas-origen: ${process.env['CAPTURA_OUT'] ? 'CAPTURA_OUT (manda sobre todo)' : c.cfg.rutas.salidas ? 'rutas.salidas del captura.config.json' : origenSalidas(r?.salidasPorDefecto === true)}`, `proyecto: ${r?.proyecto ?? ''}`, `config: ${c.configArchivo ?? '(sin archivo: valores por defecto)'}`,
       `recetas: ${c.rutas.recetas}`, `helpers: ${c.rutas.helpers}`, `escenarios: ${c.rutas.escenarios}`, `sesiones: ${c.rutas.sesiones}`,
       `slot: ${c.slot}`, `estadisticas: ${r?.estadisticas ? 'si' : 'no'}`, `salidas-base: ${leerConfigUsuario().salidasBase ?? '(ninguna: el almacén)'}`,
       `id: ${c.cfg.id.patron}${c.cfg.id.mayusculas ? ' (carpeta en mayúsculas)' : ''}`,

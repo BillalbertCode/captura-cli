@@ -10,7 +10,7 @@ de lo que hizo el agente en el navegador, para que una persona la revise en minu
 
 También corre pruebas de punta a punta bajo pedido a partir de un escenario en JSON.
 
-> Versión 1.1.1: núcleo (API de código, 22 funciones), adaptadores, workspaces con registro guiado, configuración,
+> Versión 1.1.2: núcleo (API de código, 22 funciones), adaptadores, workspaces con registro guiado, configuración,
 > escenarios (`validar`, `run`, `explorar`), `manifest.json`, avisos accionables, plugin de Claude Code, medición de
 > tokens (`stats`) y mantenimiento (`doctor`, `limpiar`). Cambios: [CHANGELOG.md](CHANGELOG.md).
 
@@ -19,7 +19,7 @@ También corre pruebas de punta a punta bajo pedido a partir de un escenario en 
 captura-cli se instala **una vez en la máquina** y se llama desde cualquier workspace (cualquier repo o carpeta):
 
 ```sh
-npm i -g --install-links github:BillalbertCode/captura-cli#v1.1.1     # una sola vez
+npm i -g --install-links github:BillalbertCode/captura-cli#v1.1.2     # una sola vez
 cd <cualquier proyecto>
 captura-cli run mi-flujo.json                                         # o cualquier otro comando
 ```
@@ -38,7 +38,7 @@ captura-cli run mi-flujo.json                                         # o cualqu
   dentro de un repo git, se excluye por `.git/info/exclude`). `init` imprime dónde quedó cada una.
 - El workspace es la raíz del repo git (los worktrees cuentan como el mismo). Cada uno se configura una vez, se cambia
   con `captura-cli config` y tiene sus propias salidas, sesiones y caché.
-- Instalarlo **solo en un proyecto** también se puede (`npm i -D github:BillalbertCode/captura-cli#v1.1.1` y
+- Instalarlo **solo en un proyecto** también se puede (`npm i -D github:BillalbertCode/captura-cli#v1.1.2` y
   `npx captura-cli …`). Es el caso adicional: ahí los scripts corren con `node` a secas.
 
 ## Instalación
@@ -51,9 +51,9 @@ Requisitos: Node 20.6 o posterior, npm, git y acceso a GitHub. Los navegadores d
 ### Global (recomendado): el comando `captura-cli` queda disponible en cualquier terminal
 
 ```sh
-npm i -g --install-links github:BillalbertCode/captura-cli#v1.1.1
+npm i -g --install-links github:BillalbertCode/captura-cli#v1.1.2
 captura-cli --version
-# 1.1.1
+# 1.1.2
 ```
 
 `--install-links` es necesario. Sin él, npm (10 y 11) instala un paquete de git en modo global como un enlace a la
@@ -69,8 +69,8 @@ dependencia. No compila nada ni necesita TypeScript.
 ### Sin instalar: `npx`
 
 ```sh
-npx --yes github:BillalbertCode/captura-cli#v1.1.1 --version
-# 1.1.1
+npx --yes github:BillalbertCode/captura-cli#v1.1.2 --version
+# 1.1.2
 ```
 
 Ejecuta la herramienta desde la caché de npm sin dejar el comando en el PATH; cada llamada vuelve a resolver la
@@ -79,7 +79,7 @@ versión contra GitHub. Sirve para probarla o para fijar una versión en un proy
 ### Respaldo: tarball de la etiqueta
 
 ```sh
-npm i -g https://codeload.github.com/BillalbertCode/captura-cli/tar.gz/v1.1.1
+npm i -g https://codeload.github.com/BillalbertCode/captura-cli/tar.gz/v1.1.2
 ```
 
 No clona con git y no necesita `--install-links`, pero instala el repo completo (`src/`, `test/`, `docs/`), no solo
@@ -159,7 +159,7 @@ claude plugin install captura@captura-cli
 En una sesión (Claude Code 2.1.275 o posterior): `/plugin install captura --marketplace BillalbertCode/captura-cli`.
 
 Instalar el plugin **no instala el CLI**. Al abrir una sesión, el hook de inicio avisa si falta `captura-cli` y da el
-comando exacto (`npm i -g --install-links github:BillalbertCode/captura-cli#v1.1.1`); Claude lo corre con tu permiso,
+comando exacto (`npm i -g --install-links github:BillalbertCode/captura-cli#v1.1.2`); Claude lo corre con tu permiso,
 o se lo pides: «instala captura-cli». El plugin queda fijado a la etiqueta de la versión (`ref` en
 `.claude-plugin/marketplace.json`), así que su skill coincide con el CLI de esa versión.
 

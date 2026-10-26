@@ -1,5 +1,17 @@
 # Cambios
 
+## 1.1.2 (2026-10-26)
+
+Lo que salió de la prueba de instalación desde cero con un Claude sin contexto, en un proyecto sin autenticación.
+
+- **Salidas y proyecto.** Las capturas no iban a la carpeta del proyecto: `salidas` y `proyecto` son carpetas
+  distintas y la herramienta no lo decía. Las preguntas de `init` ahora lo aclaran, y `init` termina diciendo dónde
+  quedó cada cosa; si el proyecto está dentro del repo y las salidas no, avisa que las capturas NO van ahí y da el
+  comando para moverlas (`captura-cli config salidas <ruta>`).
+- **Cuál salida aplica.** `init` y `config` dicen si las salidas son una ruta propia del workspace o el valor por
+  defecto. La ruta propia manda sobre la global (`salidas-base`), que solo se propone al registrar un workspace nuevo
+  y no mueve los ya registrados. `config` lo imprime en `salidas-origen:`; la línea `salidas:` sigue siendo solo la ruta.
+
 ## 1.1.1 (2026-10-26)
 
 Sin cambios de código. Empaqueta lo que se corrigió después de etiquetar la 1.1.0.

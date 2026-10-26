@@ -5,7 +5,7 @@
 import { spawnSync } from 'node:child_process'
 
 const evento = process.argv[2]
-const INSTALAR = 'npm i -g --install-links github:BillalbertCode/captura-cli#v1.1.1'
+const INSTALAR = 'npm i -g --install-links github:BillalbertCode/captura-cli#v1.1.2'
 
 function leerEntrada(ms = 5000) {
   if (process.stdin.isTTY) return Promise.resolve('')

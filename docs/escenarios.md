@@ -56,6 +56,11 @@ este paso]`. Así un problema del entorno no se confunde con un selector roto.
 Al cerrar quedan `informe.md` para personas y `manifest.json` para máquinas: resumen, casos, capturas con su
 `sha256` y su ruta en `publicar/`, cambios, recetas y respuestas 5xx.
 
+**Repetir un `run` con el mismo `id` acumula.** Un caso con el mismo nombre reemplaza al anterior en el informe, pero
+las capturas se suman: las viejas se quedan en la carpeta y las nuevas siguen la numeración (`step01`, luego `step02`,
+…). Sirve para repetir una fase sin perder lo ya tomado. Para empezar limpio, usa otro `--id` o borra esa carpeta de
+las salidas.
+
 ## Pasos
 
 | Paso | Forma | Equivale a |

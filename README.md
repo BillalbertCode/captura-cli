@@ -162,6 +162,8 @@ Instalar el plugin **no instala el CLI**. Al abrir una sesión, el hook de inici
 comando exacto (`npm i -g --install-links github:BillalbertCode/captura-cli#v1.1.2`); Claude lo corre con tu permiso,
 o se lo pides: «instala captura-cli». El plugin queda fijado a la etiqueta de la versión (`ref` en
 `.claude-plugin/marketplace.json`), así que su skill coincide con el CLI de esa versión.
+Para actualizarlo: `claude plugin marketplace update captura-cli` y `claude plugin update captura@captura-cli`;
+reinicia la sesión de Claude Code para que aplique el cambio.
 
 | Pieza | Qué hace |
 |---|---|

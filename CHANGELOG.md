@@ -1,5 +1,14 @@
 # Cambios
 
+## 1.1.1 (2026-10-26)
+
+Sin cambios de código. Empaqueta lo que se corrigió después de etiquetar la 1.1.0.
+
+- **Plugin fijado a la etiqueta.** `.claude-plugin/marketplace.json` apunta al plugin de la etiqueta de la versión
+  (`git-subdir` con `ref` y URL https completa; la forma corta `owner/repo` clona por SSH y falla sin claves de GitHub).
+- README: el plugin no instala el CLI (el hook de inicio da el comando), requisitos, npm 10 y 11 necesitan
+  `--install-links`, y lo verificado en un «computador nuevo» simulado.
+
 ## 1.1.0 (2026-10-23)
 
 Primer uso guiado: el propósito es instalar una vez en la máquina y llamarlo desde cualquier workspace.

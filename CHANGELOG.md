@@ -1,6 +1,6 @@
 # Cambios
 
-## Sin publicar
+## 1.1.3 (2026-10-28)
 
 Correcciones que salieron de usar la 1.1.2 en una tarea real (SUT-647, Portal).
 
@@ -25,6 +25,8 @@ Correcciones que salieron de usar la 1.1.2 en una tarea real (SUT-647, Portal).
   que fallan con un mensaje legible.
 - **Esperas por dato.** `foto(..., { esperarRed: true })` espera a que la app termine de pedir datos antes de capturar;
   el paso `foto` del escenario acepta `esperarRed`.
+- **La ayuda no trae el formato de id del proyecto.** Los ejemplos de `stats --id` y `explorar` son neutros; el
+  formato sale de `id.patron` en el config.
 
 ## 1.1.2 (2026-10-26)
 

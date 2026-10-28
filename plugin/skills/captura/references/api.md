@@ -39,7 +39,7 @@ await cerrar({ ninguna: 'verificación puntual' })   // informe.md, casos.json, 
 | `api(page, metodo, ruta, cuerpo)` | Petición con la sesión del navegador; prueba que el backend acepta o rechaza lo que la pantalla permite o esconde. Devuelve `{ status, texto, json }`: el texto **completo** y el JSON parseado (`null` si no es JSON). Solo el log se recorta |
 | `explorar(page, { max, completo, errores })` | Lista compacta de lo interactivo con selectores; la segunda vez en la misma ruta, solo el diff |
 | `diagnostico(page, { max })` | Ante una falla: URL, texto, botones y cookies (nombres) |
-| `esperarTexto`, `esperarExito`, `esperarToast(page, /texto/, { foto })`, `esperarHabilitado(locator)` | Esperas por estado. `esperarTexto(page, /SUT-\d+-\d{4}/)` es la espera por **dato**, no por pantalla: en listados paginados la tabla aparece antes que las filas |
+| `esperarTexto`, `esperarExito`, `esperarToast(page, /texto/, { foto })`, `esperarHabilitado(locator)` | Esperas por estado. `esperarTexto(page, /<patrón del dato>/)` es la espera por **dato**, no por pantalla: en listados paginados la tabla aparece antes que las filas (p. ej. el número de expediente que debe salir) |
 | `abrirSelectHasta(locator, 'opción')` | Abre un select que no es `<select>` (react-select y alike): trae el control a la vista, lo enfoca, pulsa `ArrowDown` y espera la opción por rol `option`. Es el patrón de elegir en un desplegable; no hace falta escribirlo a mano |
 | `receta`, `listarRecetas`, `declararRecetas` | Ver recetas.md |
 

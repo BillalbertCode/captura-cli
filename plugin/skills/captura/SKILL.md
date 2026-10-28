@@ -51,7 +51,7 @@ mirando imágenes**. Un PNG se abre solo si un caso falla o para validar dónde 
 4. **Recetas:** `captura-cli recetas <app>`. Si el tramo ya es receta, se usa y no se explora.
 5. **Explorar con texto:** `captura-cli explorar /ruta --id <id> --rol <rol> [--errores]` (lo interactivo con selectores; con
    `--errores`, campos inválidos y mensajes). El `--id` es el mismo de la tarea: si el proyecto exige un formato de id
-   (p. ej. `SUT-\d+`), sin id la herramienta lo pide (`--id <id>` o `CAPTURA_ID=<id>`). En una app sin login no hace
+   (lo fija `id.patron` en el config), sin id la herramienta lo pide (`--id <id>` o `CAPTURA_ID=<id>`). En una app sin login no hace
    falta `--rol`. Recién con selectores firmes, el escenario o el script.
 6. **Capturar y registrar casos:** un escenario (`captura-cli validar` y `run`, ver
    [references/escenarios.md](references/escenarios.md)) o un script con la API

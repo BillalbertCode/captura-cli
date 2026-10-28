@@ -10,7 +10,7 @@
 - **Esperar por contenido o URL, nunca por tiempo.** Una SPA puede tardar hasta 40 s en la primera carga; los
   `waitForTimeout` fijos fallaron.
 - **La pantalla «lista» pero sin datos.** Una tabla se dibuja vacía y se llena después: capturar ahí deja la evidencia
-  sin filas. Esperar por el **dato** (`esperarTexto(page, /SUT-\d+-\d{4}/)`) o capturar con `esperarRed: true`.
+  sin filas. Esperar por el **dato** (`esperarTexto(page, /<patrón del dato>/)`) o capturar con `esperarRed: true`.
 - **`Element is outside of the viewport`:** el elemento estaba fuera de la ventana y el clic no lo trae (con
   `click({ force: true })` no hay scroll). Traerlo a la vista antes (`scrollIntoViewIfNeeded`) o usar `elegir` /
   `abrirSelectHasta` para los desplegables tipo react-select.

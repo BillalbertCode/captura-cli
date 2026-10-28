@@ -43,7 +43,7 @@ Uso:
   captura-cli stats [--todos] [--desde 7d] [--id <id>] [--json]
                                            uso por comando (tokens estimados, tiempo, códigos), recetas,
                                            casos y espacio ocupado; --todos suma todos los workspaces;
-                                           --id acota a una tarea (p. ej. --id SUT-647)
+                                           --id acota a una tarea (p. ej. --id 123)
   captura-cli stats --transcrito <sesión.jsonl>
                                            tokens reales de una sesión de Claude Code y cuánto vino de captura-cli
   captura-cli limpiar [--antes 30d] [--aplicar]
@@ -233,7 +233,7 @@ async function explorarCli(pos: string[], op: Args['op']): Promise<number> {
     if (!rutaCruda) { rutaCruda = a; continue }
     return salir(`explorar: sobra el argumento "${a}" (uso: explorar <ruta> [--id <id>])`, CODIGOS.ERROR)
   }
-  if (!id && !rutaCruda) return salir('explorar: falta la ruta y el id (p. ej. captura-cli explorar /inicio --id SUT-1)', CODIGOS.ERROR)
+  if (!id && !rutaCruda) return salir('explorar: falta la ruta y el id (p. ej. captura-cli explorar /inicio --id 123)', CODIGOS.ERROR)
   if (!id) {
     if (!patron.test('explorar')) return salir(`explorar: falta el id (formato ${c.cfg.id.patron}): pasalo con --id <id> o CAPTURA_ID=<id>`, CODIGOS.ERROR)
     id = 'explorar'

@@ -33,7 +33,7 @@ captura-cli run flujo --rol supervisor   # por nombre, desde la carpeta de escen
 `status` falla si difiere), `receta`, `explorar` (con `errores`).
 
 **Listados paginados:** la tabla aparece antes que las filas. Esperar por el **dato** que falta, no por la pantalla:
-`{ "esperar": "/SUT-\\d+-\\d{4}-\\d+/" }` antes de `marcar`/`foto`, o capturar con
+`{ "esperar": "/<patrón del dato>/" }` antes de `marcar`/`foto`, o capturar con
 `{ "foto": { …, "esperarRed": true } }` (espera a que la app termine de pedir datos).
 
 **Desplegables que no son `<select>`** (react-select): el paso `elegir` los abre solo (trae el control a la vista,

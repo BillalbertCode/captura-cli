@@ -14,7 +14,7 @@ export type Accion =
   | { t: 'select'; sel: string; valor: string }
   | { t: 'ir'; url: string }
   | { t: 'receta'; id: string }
-export interface Tramo { foto: string; leyenda?: string; url: string; marca?: string; acciones: Accion[] }
+export interface Tramo { foto: string; leyenda?: string; url: string; marca?: string; zona?: string; acciones: Accion[] }
 export interface RecetaUsada { id: string; version: number; modo: 'ya estaba' | 'ejecutada' }
 export interface Declaracion { creadas?: string[]; ninguna?: string }
 export interface ResumenRecetas { usadas: string[]; creadas: string[]; ninguna: string; pendiente: boolean }

@@ -4,15 +4,22 @@ import { foto } from './fotos.js'
 import { limpiar, marcar } from './marcas.js'
 
 // Desplegable cuyas opciones cargan después de abrirlo: reabre hasta que aparezca la opción.
+// react-select (el input con aria-label): el elemento se trae a la vista, se enfoca y se abre con ArrowDown; el clic
+// solo no siempre abre el menú, y con `force: true` el elemento puede quedar fuera del viewport.
 export async function abrirSelectHasta(locator: Locator, texto: string | RegExp, { intentos = 6, ms = 4000 }: { intentos?: number; ms?: number } = {}): Promise<Locator> {
   const page = locator.page()
+  const op = (): Locator => page.getByRole('option', { name: texto }).first()
+  const appeared = async (): Promise<boolean> => op().waitFor({ timeout: ms }).then(() => true).catch(() => false)
   for (let i = 0; i < intentos; i++) {
-    await locator.click()
-    const op = page.getByRole('option', { name: texto }).first()
-    if (await op.waitFor({ timeout: ms }).then(() => true).catch(() => false)) return op
+    await locator.scrollIntoViewIfNeeded().catch(() => { /* si no se puede traer a la vista, sigue el camino del teclado */ })
+    await locator.click().catch(() => { /* si no se puede clicar, va el camino del teclado */ })
+    if (await appeared()) return op()
+    await locator.focus().catch(() => {})
+    await page.keyboard.press('ArrowDown')
+    if (await appeared()) return op()
     await page.keyboard.press('Escape')
   }
-  throw new Error(`abrirSelectHasta: la opción "${String(texto)}" no apareció tras ${intentos} intentos`)
+  throw new Error(`abrirSelectHasta: la opción "${String(texto)}" no apareció tras ${intentos} intentos (react-select: getByLabel exacto -> scrollIntoViewIfNeeded -> focus -> ArrowDown -> getByRole('option') -> clic)`)
 }
 
 // Botón deshabilitado mientras el sistema busca (p. ej. una fecha): espera a que se habilite.

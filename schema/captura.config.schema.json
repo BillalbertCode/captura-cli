@@ -84,6 +84,11 @@
         "horas": { "description": "Commits de las últimas N horas cuentan como del turno. Por defecto 12.", "type": "number", "exclusiveMinimum": 0 }
       }
     },
+    "precondiciones": {
+      "description": "Comandos de solo lectura que deben pasar antes de abrir la app (VPN, base, servicios). Si uno falla, sesion() no abre y dice cuál fue.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
     "extras": {
       "description": "Partes opcionales. \"correo\" carga builtin:mailpit si no se declara adaptadores.correo.",
       "type": "array",

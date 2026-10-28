@@ -4,7 +4,7 @@
 import { cargarUno } from './adaptadores/cargar.js'
 import { TIPOS, type TipoAdaptador, esFaltaConfiguracion } from './adaptadores/contrato.js'
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative, resolve, sep } from 'node:path'
+import { dirname, join, relative, resolve, sep, basename } from 'node:path'
 import { PLANTILLAS } from './plantillas.js'
 import type { OpcionesRun } from './ejecutar.js'
 import { type Escenario, recetasDe, validarEscenario } from './escenario.js'
@@ -24,12 +24,12 @@ Uso:
   captura-cli config                       muestra el registro, las rutas y la config efectiva del workspace
   captura-cli config <clave> <valor>       cambia salidas (global|ruta), proyecto, estadisticas (si|no)
                                            o salidas-base (ruta por defecto para workspaces nuevos)
-  captura-cli script [--slot N] <archivo.mjs> [args…]
+  captura-cli script [--slot N] [--limpiar] <archivo.mjs> [args…]
                                            corre un script que usa la API (import … from 'captura-cli'),
                                            también con la herramienta instalada en global
   captura-cli validar <escenario>          revisa el escenario sin abrir el navegador (sale con 2 si no es válido)
   captura-cli run <escenario> [opciones]   valida y ejecuta el escenario; informe.md, casos.json y capturas
-  captura-cli explorar <ruta> [--rol <rol>] [--app <app>] [--errores]
+  captura-cli explorar <ruta> [--id <id>] [--rol <rol>] [--app <app>] [--errores]
                                            lista lo interactivo de una pantalla con selectores sugeridos;
                                            --errores agrega campos inválidos y mensajes de error visibles
   captura-cli recetas [app]                catálogo de recetas con versión y estado
@@ -38,10 +38,12 @@ Uso:
                                            plantilla de un adaptador propio (credenciales, identificador,
                                            entorno, publicacion, correo) en <proyecto>/adaptadores/
   captura-cli entorno levantar <app> [args…] | estado | parar [app]
-                                           servicios del slot propio, mediante el adaptador de entorno
-  captura-cli stats [--todos] [--desde 7d] [--json]
+                                           servicios del slot propio, mediante el adaptador de entorno;
+                                           estado además comprueba que cada app responda
+  captura-cli stats [--todos] [--desde 7d] [--id <id>] [--json]
                                            uso por comando (tokens estimados, tiempo, códigos), recetas,
-                                           casos y espacio ocupado; --todos suma todos los workspaces
+                                           casos y espacio ocupado; --todos suma todos los workspaces;
+                                           --id acota a una tarea (p. ej. --id SUT-647)
   captura-cli stats --transcrito <sesión.jsonl>
                                            tokens reales de una sesión de Claude Code y cuánto vino de captura-cli
   captura-cli limpiar [--antes 30d] [--aplicar]
@@ -68,6 +70,7 @@ Opciones de run y explorar:
   --slot <n|auto>       slot de la corrida (= CAPTURA_SLOT)
   --out <ruta>          carpeta de salidas (= CAPTURA_OUT)
   --config <ruta>       captura.config.json (= CAPTURA_CONFIG)
+  --limpiar             vacía la carpeta del id antes de la corrida (capturas, publicar/ e informe)
 
 La API de código: import { sesion, foto, marcar, caso } from 'captura-cli'
 
@@ -215,21 +218,41 @@ async function validar(ref: string | undefined, op: Args['op']): Promise<number>
   return CODIGOS.OK
 }
 
-async function explorarCli(rutaCruda: string | undefined, op: Args['op']): Promise<number> {
+/**
+ * `explorar <ruta> [--id <id>]`: el id va con --id, con CAPTURA_ID o como argumento suelto; se reconoce por el
+ * patrón del config, así que la ruta y el id pueden ir en cualquier orden. Sin id se usa "explorar" si el patrón
+ * lo admite; si no, el error dice cómo pasarlo.
+ */
+async function explorarCli(pos: string[], op: Args['op']): Promise<number> {
+  const c = ctx()
+  const patron = new RegExp(c.cfg.id.patron)
+  let id = texto(op['id']) ?? process.env['CAPTURA_ID']
+  let rutaCruda: string | undefined
+  for (const a of pos.slice(1)) {
+    if (!id && patron.test(a)) { id = a; continue }
+    if (!rutaCruda) { rutaCruda = a; continue }
+    return salir(`explorar: sobra el argumento "${a}" (uso: explorar <ruta> [--id <id>])`, CODIGOS.ERROR)
+  }
+  if (!id && !rutaCruda) return salir('explorar: falta la ruta y el id (p. ej. captura-cli explorar /inicio --id SUT-1)', CODIGOS.ERROR)
+  if (!id) {
+    if (!patron.test('explorar')) return salir(`explorar: falta el id (formato ${c.cfg.id.patron}): pasalo con --id <id> o CAPTURA_ID=<id>`, CODIGOS.ERROR)
+    id = 'explorar'
+  }
   const ruta = rutaCruda === undefined ? undefined : sinConversionMsys(rutaCruda)
   if (!ruta || !/^(\/|https?:\/\/)/.test(ruta)) {
-    return salir(`explorar: falta la ruta (p. ej. /inicio o una URL)${process.platform === 'win32' ? '. En Git Bash, un argumento que empieza con "/" se convierte en una ruta de Windows: usar MSYS_NO_PATHCONV=1 o una URL completa' : ''}`, CODIGOS.ERROR)
+    const msys = /^[A-Za-z]:[\\/]/.test(ruta ?? '') ? ' La ruta parece una ruta de Windows convertida por Git Bash: usar MSYS_NO_PATHCONV=1 o una URL completa.' : ''
+    return salir(`explorar: falta la ruta (p. ej. /inicio o una URL)${msys}${process.platform === 'win32' ? '. En Git Bash, un argumento que empieza con "/" se convierte en una ruta de Windows: usar MSYS_NO_PATHCONV=1 o una URL completa' : ''}`, CODIGOS.ERROR)
   }
   const rol = texto(op['rol'])
   const app = texto(op['app'])
   // --rol solo hace falta si la app tiene login.
-  const nombres = Object.keys(ctx().cfg.apps)
-  const cfgApp = ctx().cfg.apps[app ?? (nombres.length === 1 ? nombres[0]! : '')]
+  const nombres = Object.keys(c.cfg.apps)
+  const cfgApp = c.cfg.apps[app ?? (nombres.length === 1 ? nombres[0]! : '')]
   if (!rol && (!cfgApp || cfgApp.login)) return salir(`explorar: falta --rol (con qué rol entrar${cfgApp ? '; la app tiene login' : '; no hace falta si la app no tiene login'})`, CODIGOS.ERROR)
   const { sesion } = await import('./sesion.js')
   const { explorar } = await import('./explorar.js')
   const { estado } = await import('./estado.js')
-  const { page, cerrar } = await sesion(rol ?? null, { ticket: texto(op['id']) ?? 'explorar', ...(app ? { app } : {}), ...opcionesNavegador(op) })
+  const { page, cerrar } = await sesion(rol ?? null, { ticket: id, ...(app ? { app } : {}), ...opcionesNavegador(op) })
   const e = estado(page)
   e.grabar = false // explorar no es un tramo para recetas
   await page.goto(/^https?:/.test(ruta) ? ruta : (e.app?.baseUrl ?? '') + ruta, { waitUntil: 'domcontentloaded' })
@@ -257,6 +280,26 @@ function adaptadorNuevo(tipo: string | undefined, op: Args['op']): number {
   return CODIGOS.OK
 }
 
+/** Salud de cada app declarada: ¿responde su baseUrl? (la VPN y los servicios los comprueban las precondiciones del config). */
+async function saludDeApps(): Promise<{ lineas: string; malas: number }> {
+  const c = ctx()
+  const L: string[] = []
+  let malas = 0
+  for (const [n, a] of Object.entries(c.cfg.apps)) {
+    let url = a.baseUrl
+    try { url = c.adaptadores.entorno.url(n, a, c.slot) } catch { /* el adaptador no sabe la url: la del config */ }
+    try {
+      // Un backend que se está levantando tarda ~25 s en responder: el tope tiene que dejarlo llegar.
+      const r = await fetch(url, { signal: AbortSignal.timeout(30000) })
+      L.push(`  ${n}: ${url} -> responde (HTTP ${r.status})`)
+    } catch (e) {
+      malas++
+      L.push(`  ${n}: ${url} -> NO RESPONDE (${String((e as Error).message).split('\n')[0]})`)
+    }
+  }
+  return { lineas: L.join('\n'), malas }
+}
+
 async function entornoCli(sub: string | undefined, args: string[]): Promise<number> {
   const c = ctx()
   const e = c.adaptadores.entorno
@@ -267,13 +310,17 @@ async function entornoCli(sub: string | undefined, args: string[]): Promise<numb
     if (sub === 'levantar') {
       const app = args[0]
       if (!app) return salir('entorno levantar: falta la app', CODIGOS.ERROR)
-      // La caché del slot caduca sola: lo que tiene más de 14 días se borra antes de levantar.
+      // La caché del slot caduca solo: lo que tiene más de 14 días se borra antes de levantar.
       const { expirarCache, DIAS_CACHE } = await import('./limpiar.js')
       const v = expirarCache(c.dirWs, c.dirSlot)
       if (v.borrados) console.log(`caché: ${v.borrados} archivo(s) de más de ${DIAS_CACHE} días borrados (${Math.round(v.bytes / 1024)} KB)`)
       r = await e.levantar!(app, { slot: c.slot, args: args.slice(1) })
-    } else if (sub === 'estado') r = await e.estado!({ slot: c.slot })
-    else r = await e.parar!(args[0], { slot: c.slot })
+    } else if (sub === 'estado') {
+      r = await e.estado!({ slot: c.slot })
+      const salud = await saludDeApps()
+      if (salud.lineas) console.log(`salud:\n${salud.lineas}`)
+      if (salud.malas) console.error(`AVISO: ${salud.malas} app(s) no responden: puede ser la VPN o un servicio caído (declarar "precondiciones" en captura.config.json para comprobarlo antes de capturar)`)
+    } else r = await e.parar!(args[0], { slot: c.slot })
   } catch (err) {
     if (esFaltaConfiguracion(err)) return salir(`FALTAN_CREDENCIALES: entorno -> ${err.message}`, CODIGOS.FALTAN_CREDENCIALES)
     throw err
@@ -319,24 +366,28 @@ async function statsCli(op: Args['op']): Promise<number> {
   }
   const d = texto(op['desde'])
   if (d !== undefined && !/^\d+d$/.test(d)) return salir(`stats --desde: días, p. ej. 7d (recibido "${d}")`, CODIGOS.ERROR)
+  const id = texto(op['id'])
   const desde = d ? Date.now() - Number(d.slice(0, -1)) * 86400000 : 0
   const etiqueta = d ? new Date(desde).toISOString().slice(0, 10) : ''
   if (op['todos']) {
     const raizWs = join(home(), 'workspaces')
     const nombres = existsSync(raizWs) ? readdirSync(raizWs) : []
     const todas = nombres.flatMap((n) => s.leerLibro(join(raizWs, n, 'uso.jsonl'), desde))
-    if (op['json']) { console.log(JSON.stringify(s.resumir(todas), null, 2)); return CODIGOS.OK }
-    console.log(s.formatear(`todos (${nombres.length} workspace(s))`, s.resumir(todas), etiqueta))
+    const lineas = id ? s.deId(todas, id) : todas
+    if (op['json']) { console.log(JSON.stringify(s.resumir(lineas), null, 2)); return CODIGOS.OK }
+    console.log(s.formatear(`todos (${nombres.length} workspace(s))${id ? ` · ${id}` : ''}`, s.resumir(lineas), etiqueta))
     for (const n of nombres) {
-      const r = s.resumir(s.leerLibro(join(raizWs, n, 'uso.jsonl'), desde))
+      const l = s.leerLibro(join(raizWs, n, 'uso.jsonl'), desde)
+      const r = s.resumir(id ? s.deId(l, id) : l)
       if (r.corridas) console.log(`  ${n}: ${r.corridas} corrida(s), ${r.tokens} tokens estimados`)
     }
     return CODIGOS.OK
   }
   const c = ctx()
-  const r = s.resumir(s.leerLibro(join(c.dirWs, 'uso.jsonl'), desde))
+  const lineas = s.leerLibro(join(c.dirWs, 'uso.jsonl'), desde)
+  const r = s.resumir(id ? s.deId(lineas, id) : lineas)
   if (op['json']) { console.log(JSON.stringify(r, null, 2)); return CODIGOS.OK }
-  console.log(s.formatear(c.registro.nombre, r, etiqueta))
+  console.log(s.formatear(id ? `${c.registro.nombre} · ${id}` : c.registro.nombre, r, etiqueta))
   console.log(s.espacio(c.rutas.salidas, c.dirWs))
   if (!c.registro.estadisticas) console.log('(el registro de estadísticas está apagado: captura-cli config estadisticas si)')
   return CODIGOS.OK
@@ -388,12 +439,13 @@ function aplicarOpcionesDeEntorno(op: Args['op']): void {
     const x = texto(op[o])
     if (x !== undefined) process.env[v] = o === 'config' || o === 'out' ? resolve(x) : x
   }
+  if (op['limpiar']) process.env['CAPTURA_LIMPIAR'] = '1'
 }
 
 // ---------- scripts ----------
 
 /**
- * captura-cli script [--slot N] [--canal c] [--out ruta] [--config ruta] <archivo.mjs> [args del script…]
+ * captura-cli script [--slot N] [--canal c] [--out ruta] [--config ruta] [--limpiar] <archivo.mjs> [args del script…]
  * Lo que va después del archivo es del script; las opciones de captura-cli van antes.
  */
 async function scriptCli(args: string[]): Promise<number> {
@@ -401,15 +453,19 @@ async function scriptCli(args: string[]): Promise<number> {
   let i = 0
   for (; i < args.length && args[i]!.startsWith('--'); i++) {
     const [k, v] = args[i]!.slice(2).split(/=(.*)/s)
-    if (!['slot', 'canal', 'out', 'config'].includes(k!)) return salir(`script: opción desconocida --${k} antes del archivo (válidas: --slot, --canal, --out, --config); lo que va después del archivo es para el script`, CODIGOS.ERROR)
+    if (!['slot', 'canal', 'out', 'config', 'limpiar'].includes(k!)) return salir(`script: opción desconocida --${k} antes del archivo (válidas: --slot, --canal, --out, --config, --limpiar); lo que va después del archivo es para el script`, CODIGOS.ERROR)
+    if (k === 'limpiar') { propias['limpiar'] = true; continue }
     const valor = v ?? args[++i]
     if (valor === undefined) return salir(`script: falta el valor de --${k}`, CODIGOS.ERROR)
     propias[k!] = valor
   }
   const archivo = args[i]
-  if (!archivo) return salir('script: falta el archivo (captura-cli script [--slot N] [--canal c] [--out ruta] [--config ruta] <archivo.mjs> [args…])', CODIGOS.ERROR)
+  if (!archivo) return salir('script: falta el archivo (captura-cli script [--slot N] [--canal c] [--out ruta] [--config ruta] [--limpiar] <archivo.mjs> [args…])', CODIGOS.ERROR)
   aplicarOpcionesDeEntorno(propias)
   await ofrecerRegistro()
+  await preparar()
+  // El libro de uso arranca aquí: cada invocación (aunque falle) queda contada con su código de salida.
+  iniciarLibro('script', basename(archivo))
   const { ejecutarScript } = await import('./script.js')
   return ejecutarScript(archivo, args.slice(i + 1))
 }
@@ -442,7 +498,7 @@ async function main(): Promise<number> {
     const { ejecutarEscenario } = await import('./ejecutar.js')
     return ejecutarEscenario(esc, opcionesNavegador(op))
   }
-  if (cmd === 'explorar') return explorarCli(pos[1], op)
+  if (cmd === 'explorar') return explorarCli(pos, op)
   if (cmd === 'stats') return statsCli(op)
   if (cmd === 'limpiar') return limpiarCli(op)
   if (cmd === 'adaptador' && pos[1] === 'nuevo') return adaptadorNuevo(pos[2], op)

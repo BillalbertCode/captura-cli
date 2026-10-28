@@ -141,14 +141,29 @@ export async function cerrarRecetas(page: Page, d?: Declaracion): Promise<void> 
 
 const esc = (s: string): string => s.replace(/'/g, "\\'")
 
+/**
+ * Texto de la app que sirve como comprobación: sin números fijos ("14 En trámite" -> /\d+ En trámite/) y sin
+ * caracteres que rompan el patrón. La etiqueta de la marca roja NO sirve: es lo que escribió el agente, no la app.
+ */
+function patronDeZona(zona: string | undefined): string | null {
+  const t = (zona ?? '').replace(/\s+/g, ' ').trim()
+  if (!t || t.length > 60) return null
+  const esc2 = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return /\d/.test(t) ? `/${esc2.replace(/\d+/g, '\\d+')}/` : `'${esc2.replace(/'/g, "\\'")}'`
+}
+
 function borrador(id: string, tramos: Tramo[]): string {
   const L = [`# Recetas candidatas de ${id} (borrador generado de lo que hizo el script)`, '',
     `Cada tramo es lo hecho hasta una captura. Sirve de punto de partida: unir tramos, ponerle id y \`verificar\` reales, y registrarlo en \`${join(dirRecetas(), '<app>.mjs')}\`. Lo hecho dentro de una receta no aparece acá.`, '']
   tramos.forEach((t, i) => {
     const ruta = t.url || ''
+    const zona = patronDeZona(t.zona)
+    const check = ruta
+      ? `new URL(page.url()).pathname === '${ruta}'${zona ? ` && await page.getByText(${zona}).first().isVisible()` : ''}`
+      : zona ? `await page.getByText(${zona}).first().isVisible()` : '{ /* COMPLETAR: qué texto o URL comprueba esta pantalla */ }'
     L.push(`## Tramo ${i + 1} → ${t.foto}${ruta ? ` (ruta ${ruta})` : ''}`, '', '```js',
       `'tramo-${i + 1}': { version: 1, descripcion: '${esc(t.leyenda || t.foto)}', vistoEn: '${id}',`,
-      `  verificar: async (page) => ${ruta ? `new URL(page.url()).pathname === '${ruta}'` : 'true /* completar */'}${t.marca ? ` && await page.getByText('${esc(t.marca)}').first().isVisible()` : ''},`,
+      `  verificar: async (page) => ${check},`,
       '  hacer: async (page) => {')
     for (const a of t.acciones) {
       if (a.t === 'receta') L.push(`    // usó la receta ${a.id}`)

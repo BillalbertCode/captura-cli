@@ -2,7 +2,7 @@
 // informe.md se regenera desde él. Un caso con el mismo nombre reemplaza al anterior, así se puede repetir una fase
 // sin duplicar. Las capturas registradas por foto() (con leyenda y marca) se copian a publicar/: de ahí, y solo de
 // ahí, se suben. Un PNG step*.png que no pasó por foto() se avisa como "sin registrar".
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Page } from 'playwright'
 import { createHash } from 'node:crypto'
@@ -59,6 +59,22 @@ function pngsSueltos(dir: string): string[] {
     else if (d.isFile() && /^step\d+-.*\.png$/.test(d.name)) out.push(join(dir, d.name))
   }
   return out
+}
+
+/**
+ * Vacía la carpeta de una corrida antes de empezar de nuevo: los PNG de pasos, `publicar/` y los json del informe.
+ * Lo que hay adentro es de la corrida anterior (salvo que se pida otra vez); devuelve qué se borró.
+ */
+export function limpiarCorrida(base: string): string[] {
+  if (!existsSync(base)) return []
+  const borrados: string[] = []
+  const rm = (f: string): void => {
+    try { rmSync(f, { recursive: true, force: true }); borrados.push(f) } catch { /* ya no está */ }
+  }
+  for (const f of pngsSueltos(base)) rm(f)
+  rm(join(base, 'publicar'))
+  for (const n of ['casos.json', 'manifest.json', 'informe.md', 'recetas-candidatas.md']) rm(join(base, n))
+  return borrados
 }
 
 interface Acumulado {
@@ -123,10 +139,16 @@ export function escribirInforme(page: Page): void {
   if (!e.casos.length && acum.fotos.length) console.error('AVISO: hay capturas pero ningún caso() en esta corrida; el informe no las registra')
   const pub = join(base, 'publicar')
   if (acum.fotos.length) mkdirSync(pub, { recursive: true })
+  const esperadas = new Set<string>()
   for (const f of acum.fotos) {
     const origen = join(base, f.ruta)
-    if (existsSync(origen)) copyFileSync(origen, join(pub, f.ruta.replace(/^\.\//, '').replaceAll('/', '__')))
+    const nombre = f.ruta.replace(/^\.\//, '').replaceAll('/', '__')
+    esperadas.add(nombre)
+    if (existsSync(origen)) copyFileSync(origen, join(pub, nombre))
   }
+  // Lo que quedó en publicar/ de corridas anteriores NO está en el manifest: se sube igual, así que se avisa.
+  const viejas = existsSync(pub) ? readdirSync(pub).filter((n) => !esperadas.has(n) && /^step\d+-.*\.png$/.test(n)) : []
+  if (viejas.length) console.error(`AVISO: publicar/ tiene ${viejas.length} captura(s) de corridas anteriores que no están en el manifest.json: ${viejas.slice(0, 8).join(', ')}${viejas.length > 8 ? '…' : ''} — se subirían con el resto: usar --limpiar para empezar de cero`)
   for (const c of e.casos) {
     const n = { ...c, captura: rel(c.captura) }
     const i = acum.casos.findIndex((x) => x.nombre === n.nombre)

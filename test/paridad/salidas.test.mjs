@@ -93,7 +93,9 @@ test('recetas-candidatas.md: tramo con selectores pegables y clave enmascarada',
   assert.equal(md.split('\n')[0], `# Recetas candidatas de ${ID} (borrador generado de lo que hizo el script)`)
   assert.match(md, /^## Tramo 1 → step\d{2}-bandeja-llena \(ruta \/bandeja\)$/m)
   assert.ok(md.includes("'tramo-1': { version: 1, descripcion: 'La bandeja con los filtros llenos', vistoEn: '" + ID + "',"))
-  assert.ok(md.includes("verificar: async (page) => new URL(page.url()).pathname === '/bandeja' && await page.getByText('Bandeja con filtros').first().isVisible(),"))
+  // El `verificar` se arma con el texto de la app (la zona de la marca), no con la etiqueta que escribió el agente.
+  assert.ok(md.includes("verificar: async (page) => new URL(page.url()).pathname === '/bandeja' && await page.getByText('Bandeja').first().isVisible(),"))
+  assert.ok(!md.includes('Bandeja con filtros'), 'la etiqueta de la marca roja no sirve como comprobación')
   for (const l of [
     '    // usó la receta abrir-bandeja',
     "    await page.getByPlaceholder('Documento').fill('12345678')",

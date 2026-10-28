@@ -16,14 +16,18 @@ export interface OpcionesFoto {
   completa?: boolean
   leyenda?: string
   sinMarca?: string
+  /** Esperar a que la app termine de pedir datos antes de capturar (tabla que se dibuja vacía y se llena después). */
+  esperarRed?: boolean
 }
 
-export async function foto(page: Page, descripcion: string, { completa = false, leyenda, sinMarca }: OpcionesFoto = {}): Promise<string> {
+export async function foto(page: Page, descripcion: string, { completa = false, leyenda, sinMarca, esperarRed = false }: OpcionesFoto = {}): Promise<string> {
   if (!leyenda || !String(leyenda).trim()) throw new Error(`foto("${descripcion}"): falta { leyenda } — toda captura lleva leyenda`)
   if (sinMarca !== undefined && !(typeof sinMarca === 'string' && sinMarca.trim())) {
     throw new Error(`foto("${descripcion}"): sinMarca exige un motivo (texto); solo si el usuario pidió una captura sin marca`)
   }
   const e = estado(page)
+  // La red se calma ANTES de medir las marcas: si llegan datos después, la página se mueve y la marca queda donde no.
+  if (esperarRed) await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {})
   const detalle = e.marcas.length ? await redibujarMarcas(page) : []
   const marcas = detalle.length
   if (!marcas && !sinMarca) throw new Error(`foto("${descripcion}"): no hay marca roja activa — usar marcar() antes (o { sinMarca: 'motivo' } si el usuario lo pidió)`)
@@ -42,7 +46,7 @@ export async function foto(page: Page, descripcion: string, { completa = false, 
     await page.evaluate(() => document.querySelectorAll('.__leyenda').forEach((x) => x.remove())).catch(() => {})
   }
   const url = (() => { try { return new URL(page.url()).pathname } catch { return '' } })()
-  e.tramos.push({ foto: `step${nn}-${slug(descripcion)}`, leyenda: String(leyenda).trim(), url, marca: detalle[0]?.texto || '', acciones: e.acciones.splice(0) })
+  e.tramos.push({ foto: `step${nn}-${slug(descripcion)}`, leyenda: String(leyenda).trim(), url, marca: detalle[0]?.texto || '', zona: detalle[0]?.zona || '', acciones: e.acciones.splice(0) })
   e.fotos.push({ ruta, paso: n, leyenda: String(leyenda).trim(), marcada: marcas > 0, sinMarca: sinMarca || '', marcas: detalle })
   e.ultimoPaso = `foto step${nn}-${slug(descripcion)}`
   console.log(`captura: ${ruta}${marcas ? '' : ` (sin marca: ${sinMarca})`}`)

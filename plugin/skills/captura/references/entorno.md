@@ -4,10 +4,16 @@ Los servicios de la app los levanta el **adaptador de entorno** del proyecto (un
 `builtin:comando`, o un adaptador propio). La herramienta no sabe de puertos ni de repos.
 
 ```sh
-captura-cli entorno estado                    # qué hay arriba en el slot propio
+captura-cli entorno estado                    # qué hay arriba en el slot propio + si cada app responde
 captura-cli entorno levantar <app> [args…]    # lo que falte
 captura-cli entorno parar [app]               # solo cuando el usuario lo pide
 ```
+
+- **Salud:** `entorno estado` además consulta el `baseUrl` de cada app del config y avisa si alguna no responde
+  (VPN caída o servicio abajo). Lo que la herramienta no sabe (el backend, el BFF, la base) se declara en
+  `captura.config.json` con **`precondiciones`**: una lista de comandos de solo lectura (p. ej. `["bash bin/vpn.sh"]`)
+  que `sesion()` ejecuta **antes** de abrir la app; si uno falla, la sesión no abre y el error dice cuál fue y qué
+  salió. Así no se capturan pantallas contra un entorno caído.
 
 - **Slots (varios agentes a la vez):** cada corrida usa un número (`--slot N`, `--slot auto` = el primero libre, o
   `CAPTURA_SLOT`). La herramienta separa por slot sesiones, caché y temporales; el adaptador traduce el slot a

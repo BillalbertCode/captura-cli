@@ -35,10 +35,17 @@ export interface Resumen {
   casos: Contadores['casos']
   capturas: number
   errores5xx: number
+  /** Corridas por id de tarea: separa lo del workspace de lo de una tarea concreta. */
+  porId: Record<string, number>
+}
+
+/** Solo las líneas de una tarea: cada corrida sabe con qué id se abrió (aunque el script fallara). */
+export function deId(lineas: LineaUso[], id: string): LineaUso[] {
+  return lineas.filter((l) => (l.ids ?? []).includes(id))
 }
 
 export function resumir(lineas: LineaUso[]): Resumen {
-  const r: Resumen = { corridas: lineas.length, porComando: {}, tokens: 0, recetas: { yaEstaba: 0, ejecutada: 0, rota: 0, creadas: 0, candidatas: 0 }, casos: { ok: 0, falla: 0 }, capturas: 0, errores5xx: 0 }
+  const r: Resumen = { corridas: lineas.length, porComando: {}, tokens: 0, recetas: { yaEstaba: 0, ejecutada: 0, rota: 0, creadas: 0, candidatas: 0 }, casos: { ok: 0, falla: 0 }, capturas: 0, errores5xx: 0, porId: {} }
   for (const l of lineas) {
     const c = (r.porComando[l.comando || '(sin comando)'] ??= { corridas: 0, tokens: 0, ms: 0, codigos: {} })
     c.corridas++
@@ -51,6 +58,7 @@ export function resumir(lineas: LineaUso[]): Resumen {
     r.casos.falla += l.casos?.falla ?? 0
     r.capturas += l.capturas ?? 0
     r.errores5xx += l.errores5xx ?? 0
+    for (const id of l.ids ?? []) r.porId[id] = (r.porId[id] ?? 0) + 1
   }
   return r
 }
@@ -67,6 +75,8 @@ export function formatear(nombre: string, r: Resumen, desde: string): string {
   const rc = r.recetas
   L.push(`recetas: usadas ${rc.yaEstaba + rc.ejecutada} (ya estaban ${rc.yaEstaba}, ejecutadas ${rc.ejecutada}) · rotas ${rc.rota} · creadas ${rc.creadas} · tramos candidatos ${rc.candidatas}`)
   L.push(`casos: ${r.casos.ok} OK, ${r.casos.falla} FALLA · capturas ${r.capturas} · respuestas 5xx ${r.errores5xx}`)
+  const ids = Object.entries(r.porId).sort((a, b) => b[1] - a[1])
+  if (ids.length) L.push(`por tarea: ${ids.map(([id, n]) => `${id}: ${n} corrida(s)`).join(' · ')}`)
   return L.join('\n')
 }
 

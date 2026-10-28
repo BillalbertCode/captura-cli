@@ -66,6 +66,7 @@ function resolverSlot(dirWs: string): number {
 }
 
 export async function preparar(cwd = process.cwd()): Promise<void> {
+  if (actual) return // ya está: el CLI y la API la piden (una sola vez por proceso)
   actual = null
   problema = null
   const raiz = raizWorkspace(cwd)

@@ -46,7 +46,17 @@ const desc = (s: Selector): string => {
 async function ejecutarPaso(page: Page, p: Paso, ultimaFoto: { ruta?: string }): Promise<void> {
   const base = estado(page).app?.baseUrl ?? ''
   if ('ir' in p) { await page.goto(/^https?:/.test(p.ir) ? p.ir : base + p.ir, { waitUntil: 'domcontentloaded' }); return }
-  if ('click' in p) { await localizar(page, p.click.en).click(); return }
+  if ('click' in p) {
+    const l = localizar(page, p.click.en)
+    // Fuera de la ventana, el clic falla: primero se trae a la vista (react-select, tablas largas).
+    await l.scrollIntoViewIfNeeded({ timeout: 5000 }).catch(() => {})
+    try { await l.click() } catch (err) {
+      const m = String((err as Error).message)
+      if (/outside of the viewport/i.test(m)) throw new Error(`${m} → el elemento quedó fuera de la ventana: usar el paso "elegir" (react-select) o un "esperar" antes`)
+      throw err
+    }
+    return
+  }
   if ('llenar' in p) { await localizar(page, p.llenar.en).fill(p.llenar.valor); return }
   if ('elegir' in p) {
     const l = localizar(page, p.elegir.en)
@@ -95,7 +105,7 @@ async function ejecutarPaso(page: Page, p: Paso, ultimaFoto: { ruta?: string }):
   if ('limpiar' in p) { await limpiar(page); return }
   if ('foto' in p) {
     const f = p.foto
-    ultimaFoto.ruta = await foto(page, f.descripcion, { leyenda: f.leyenda, ...(f.sinMarca ? { sinMarca: f.sinMarca } : {}), ...(f.completa ? { completa: true } : {}) })
+    ultimaFoto.ruta = await foto(page, f.descripcion, { leyenda: f.leyenda, ...(f.sinMarca ? { sinMarca: f.sinMarca } : {}), ...(f.completa ? { completa: true } : {}), ...(f.esperarRed ? { esperarRed: true } : {}) })
     return
   }
   if ('cambio' in p) { cambio(page, { que: p.cambio.que, ...(p.cambio.revertir !== undefined ? { revertir: p.cambio.revertir } : {}), revertido: p.cambio.revertido ?? false }); return }

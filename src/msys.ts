@@ -7,7 +7,10 @@ export function sinConversionMsys(arg: string, env: NodeJS.ProcessEnv = process.
   if (plataforma !== 'win32' || !env['MSYSTEM'] || !exe) return arg
   const a = arg.replaceAll('\\', '/')
   const base = exe.replaceAll('\\', '/').replace(/\/+$/, '')
-  for (const raiz of [base.replace(/\/(usr\/)?bin$/i, ''), base]) {
+  // EXEPATH apunta al binario de Git: …/Git/bin (una instalación) o …/Git/usr/bin/bash (la de Git for Windows).
+  // La raíz de la instalación está quitando "/bin" o "/usr/bin/bash"; se prueba al final para no pisar /usr/share.
+  const raizGit = base.replace(/\/(usr\/)?bin\/[^/]+$/i, '').replace(/\/(usr\/)?bin$/i, '')
+  for (const raiz of [base.replace(/\/(usr\/)?bin$/i, ''), base, ...(raizGit && raizGit !== base ? [raizGit] : [])]) {
     const r = raiz.toLowerCase(), x = a.toLowerCase()
     if (x === r || x === `${r}/`) return '/'
     if (x.startsWith(`${r}/`)) return a.slice(raiz.length)

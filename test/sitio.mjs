@@ -39,11 +39,27 @@ export function sitio({ puerto = 0 } = {}) {
     // Una app sin login: pantalla pública con un contador.
     '/publico': `<h1>Publico</h1><p>Esta pantalla no pide login.</p><button id="contar">Contar</button> <span id="n">0</span>
       <script>document.getElementById('contar').addEventListener('click',()=>{const n=document.getElementById('n');n.textContent=Number(n.textContent)+1})</script>`,
+    // Control tipo react-select: el input con aria-label NO abre el menú con el clic (se abre con el teclado) y
+    // las opciones tienen role=option. Está abajo de la pantalla, como el de la app real.
+    '/react-select': `<h1>React</h1><div style="height:2500px">contenido</div>
+      <input id="estado" aria-label="Estado">
+      <div id="menu" role="listbox" style="display:none"><div role="option">Pendiente</div><div role="option">Aprobado</div><div role="option">Rechazado</div></div>
+      <div id="valor">(sin elegir)</div>
+      <script>
+        const input=document.getElementById('estado'),menu=document.getElementById('menu'),valor=document.getElementById('valor')
+        input.addEventListener('keydown',(e)=>{if(e.key==='ArrowDown')menu.style.display='block'})
+        menu.addEventListener('click',(e)=>{const o=e.target.closest('[role=option]');if(o){valor.textContent=o.textContent;menu.style.display='none'}})
+      </script>`,
     // El backend de la app falla (503): la pantalla se queda cargando.
     '/roto': `${guardia}<h1>Reportes</h1><p id="estado">Cargando datos…</p><script>setTimeout(()=>fetch('/api/falla'),300)</script>`,
   }
   const server = http.createServer((q, r) => {
     const ruta = q.url.split('?')[0]
+    if (ruta === '/api/largo') {
+      // Respuesta larga: api() no debe recortarla (el texto completo y el JSON parseado).
+      r.setHeader('content-type', 'application/json')
+      return r.end(JSON.stringify({ largo: 'x'.repeat(2000), items: Array.from({ length: 50 }, (_, i) => ({ id: i, nombre: `fila ${i}` })) }))
+    }
     if (ruta === '/api/falla') {
       r.statusCode = 503
       return r.end('{"error":"ya tenemos demasiados clientes"}')

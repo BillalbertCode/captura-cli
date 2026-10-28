@@ -49,12 +49,16 @@ mirando imágenes**. Un PNG se abre solo si un caso falla o para validar dónde 
    inventar, parar y pedirlo con el mensaje exacto. ¿La prueba exige cambiar un parámetro, menú o permiso? Ver
    [references/datos.md](references/datos.md).
 4. **Recetas:** `captura-cli recetas <app>`. Si el tramo ya es receta, se usa y no se explora.
-5. **Explorar con texto:** `captura-cli explorar /ruta --rol <rol> [--errores]` (lo interactivo con selectores; con
-   `--errores`, campos inválidos y mensajes). En una app sin login no hace falta `--rol`. Recién con selectores firmes, el escenario o el script.
+5. **Explorar con texto:** `captura-cli explorar /ruta --id <id> --rol <rol> [--errores]` (lo interactivo con selectores; con
+   `--errores`, campos inválidos y mensajes). El `--id` es el mismo de la tarea: si el proyecto exige un formato de id
+   (p. ej. `SUT-\d+`), sin id la herramienta lo pide (`--id <id>` o `CAPTURA_ID=<id>`). En una app sin login no hace
+   falta `--rol`. Recién con selectores firmes, el escenario o el script.
 6. **Capturar y registrar casos:** un escenario (`captura-cli validar` y `run`, ver
    [references/escenarios.md](references/escenarios.md)) o un script con la API
    ([references/api.md](references/api.md)), siempre con `captura-cli script <archivo>` y no con `node` (con la
    herramienta instalada en global, `node` no encuentra el paquete). Una `foto` por momento que importe, no por clic.
+   Al repetir la misma tarea, `--limpiar` (en `script` y `run`): si no, quedan las capturas de la corrida anterior y los
+   `stepNN` se duplican.
 7. **Verificar el efecto** de cada escritura con una consulta de solo lectura.
 8. **Reportar:** la tabla de casos de `informe.md`, la carpeta `publicar/` (lo único que se sube) y qué datos quedaron
    cambiados. Nombrar los servicios que quedaron arriba.

@@ -43,8 +43,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepare": "node scripts/prepare.mjs",
-    "test": "npm run build && node --test --test-concurrency=1 \"test/*.test.mjs\" \"test/paridad/*.test.mjs\"",
-    "test:paridad": "node --test --test-concurrency=1 \"test/paridad/*.test.mjs\"",
+    "test": "npm run build && node -e \"require('fs').rmSync('test/.tmp',{recursive:true,force:true})\" && node --test --test-concurrency=1 \"test/*.test.mjs\" \"test/paridad/*.test.mjs\"",
+    "test:paridad": "node -e \"require('fs').rmSync('test/.tmp',{recursive:true,force:true})\" && node --test --test-concurrency=1 \"test/paridad/*.test.mjs\"",
     "release:preparar": "node scripts/release-preparar.mjs"
   },
   "dependencies": {

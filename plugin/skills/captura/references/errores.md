@@ -9,6 +9,13 @@
   confirmación dio un falso OK.
 - **Esperar por contenido o URL, nunca por tiempo.** Una SPA puede tardar hasta 40 s en la primera carga; los
   `waitForTimeout` fijos fallaron.
+- **La pantalla «lista» pero sin datos.** Una tabla se dibuja vacía y se llena después: capturar ahí deja la evidencia
+  sin filas. Esperar por el **dato** (`esperarTexto(page, /SUT-\d+-\d{4}/)`) o capturar con `esperarRed: true`.
+- **`Element is outside of the viewport`:** el elemento estaba fuera de la ventana y el clic no lo trae (con
+  `click({ force: true })` no hay scroll). Traerlo a la vista antes (`scrollIntoViewIfNeeded`) o usar `elegir` /
+  `abrirSelectHasta` para los desplegables tipo react-select.
+- **Repetir un script con el mismo id:** quedan los PNG de la corrida anterior y los `stepNN` se duplican (y
+  `publicar/` se ensucia). `captura-cli script --limpiar …` vacía la carpeta del id antes de empezar.
 - **Terminar el login antes de leer cookies.** `sesion` espera el `postLogin` y `api` espera la sesión; sin eso, el
   401 engaña.
 - **Averiguar dónde viaja la sesión** antes de llamar a la API: cookie httpOnly, cabecera con token o proxy del front.

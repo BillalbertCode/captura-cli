@@ -58,8 +58,9 @@ Al cerrar quedan `informe.md` para personas y `manifest.json` para máquinas: re
 
 **Repetir un `run` con el mismo `id` acumula.** Un caso con el mismo nombre reemplaza al anterior en el informe, pero
 las capturas se suman: las viejas se quedan en la carpeta y las nuevas siguen la numeración (`step01`, luego `step02`,
-…). Sirve para repetir una fase sin perder lo ya tomado. Para empezar limpio, usa otro `--id` o borra esa carpeta de
-las salidas.
+…). Sirve para repetir una fase sin perder lo ya tomado. Para empezar limpio, usa otro `--id`, borra esa carpeta de
+las salidas o pasa `--limpiar` (vacía la carpeta del id: capturas, `publicar/` e informe). Al cerrar, la herramienta
+avisa si `publicar/` tiene capturas de corridas anteriores que no están en el `manifest.json`: se subirían igual.
 
 ## Pasos
 
@@ -76,7 +77,7 @@ las salidas.
 | `comprobar` | `{ "en": S, "visible": bool, "texto": "…", "habilitado": bool }` | Una aserción: falla el caso si no se cumple |
 | `marcar` | `{ "en": S, "etiqueta": "…", "lado", "numero" }` | `marcar` |
 | `limpiar` | `true` | `limpiar` |
-| `foto` | `{ "descripcion", "leyenda", "sinMarca", "completa" }` | `foto`: leyenda obligatoria y marca activa (o `sinMarca` con motivo) |
+| `foto` | `{ "descripcion", "leyenda", "sinMarca", "completa", "esperarRed" }` | `foto`: leyenda obligatoria y marca activa (o `sinMarca` con motivo); `esperarRed` espera a que la app termine de pedir datos antes de capturar |
 | `cambio` | `{ "que", "revertir", "revertido" }` | `cambio` |
 | `api` | `{ "metodo", "ruta", "cuerpo", "status" }` | `api`; con `status`, falla si la respuesta es otra |
 | `receta` | `"id"` o `{ "id", "args" }` | `receta` |

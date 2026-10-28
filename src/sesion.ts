@@ -1,4 +1,5 @@
 // Credenciales, apps, login con sesión guardada y API con la sesión del navegador.
+import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { Page } from 'playwright'
@@ -55,6 +56,19 @@ function elegirApp(app: string | undefined): string {
   throw new Error(`sesion(): falta { app } (${nombres.join(', ') || 'ninguna declarada en captura.config.json'})`)
 }
 
+/**
+ * Precondiciones del config (VPN, base, servicios): comandos de solo lectura que deben pasar antes de abrir la app.
+ * Si uno falla, la sesión no abre y el mensaje dice cuál fue y qué salió (para no capturar contra un entorno caído).
+ */
+function comprobarPrecondiciones(cmds: string[]): void {
+  for (const cmd of cmds) {
+    const r = spawnSync(cmd, { shell: true, encoding: 'utf8', timeout: 60000, windowsHide: true })
+    if (r.status === 0) continue
+    const salida = `${r.stdout ?? ''}${r.stderr ?? ''}`.trim().split('\n').filter(Boolean).slice(-3).join(' | ')
+    salir(`precondiciones: falló «${cmd}» (código ${r.status ?? 'sin código'}): ${salida || '(sin salida)'}`, CODIGOS.ERROR)
+  }
+}
+
 async function abrirSinLogin(rol: string | null | undefined, nombre: string, a: AppConfig, opts: Omit<OpcionesSesion, 'app' | 'reutilizar'>): Promise<Abierto> {
   const r = await abrir(opts)
   fijarApp(r.page, a, nombre)
@@ -84,6 +98,7 @@ async function abrirSinLogin(rol: string | null | undefined, nombre: string, a: 
 // (se puede pasar null) y no hay sesión que guardar.
 export async function sesion(rol: string | null | undefined, { app, reutilizar = true, ...opts }: OpcionesSesion): Promise<Abierto> {
   const c = ctx()
+  comprobarPrecondiciones(c.cfg.precondiciones)
   const nombre = elegirApp(app)
   const cfgApp = apps[nombre]!
   const a: AppConfig = { ...cfgApp, baseUrl: c.adaptadores.entorno.url(nombre, cfgApp, c.slot) }
@@ -122,7 +137,8 @@ export async function sesion(rol: string | null | undefined, { app, reutilizar =
 // Prueba que el backend también rechaza/acepta lo que la pantalla esconde o permite. La petición sale del contexto
 // del navegador (mismas cookies). Si la app declara `cookieSesion`, además se manda esa cookie como Bearer (apps que
 // pasan el token por cabecera a través de un proxy).
-export async function api(page: Page, metodo: string, ruta: string, cuerpo?: unknown): Promise<{ status: number; texto: string }> {
+// Devuelve el texto COMPLETO y el JSON parseado (null si la respuesta no es JSON): el log es lo único que se recorta.
+export async function api(page: Page, metodo: string, ruta: string, cuerpo?: unknown): Promise<{ status: number; texto: string; json: unknown }> {
   const e = estado(page)
   const a = e.app
   if (!a) throw new Error('api(): abrir con sesion() para conocer la app')
@@ -141,10 +157,12 @@ export async function api(page: Page, metodo: string, ruta: string, cuerpo?: unk
   const r = await page.request.fetch(url, { method: metodo.toUpperCase(), headers, ...(cuerpo !== undefined ? { data: cuerpo } : {}) })
   // page.request no pasa por los eventos de la página: el 5xx se anota aquí.
   if (r.status() >= 500) registrar5xx(page, metodo.toUpperCase(), url, r.status())
-  const texto = (await r.text()).slice(0, 500)
+  const texto = await r.text()
+  let json: unknown = null
+  try { json = JSON.parse(texto) } catch { /* no es JSON: json queda null */ }
   if ((r.status() === 401 || r.status() === 403) && !a.cookieSesion && (await page.context().cookies(a.baseUrl)).length === 0) {
     throw new Error(`api(): ${r.status()} y el navegador no tiene ninguna cookie de ${new URL(a.baseUrl).origin} (¿terminó el login?). Si la app pasa el token en una cabecera, declarar apps.<app>.cookieSesion con el nombre de la cookie que lo guarda`)
   }
   console.log(`api ${metodo.toUpperCase()} ${ruta} -> ${r.status()} ${texto.slice(0, 160)}`)
-  return { status: r.status(), texto }
+  return { status: r.status(), texto, json }
 }

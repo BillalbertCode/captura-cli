@@ -32,6 +32,14 @@ captura-cli run flujo --rol supervisor   # por nombre, desde la carpeta de escen
 `comprobar` (aserción: `visible`, `texto`, `habilitado`), `marcar`, `limpiar`, `foto`, `cambio`, `api` (con
 `status` falla si difiere), `receta`, `explorar` (con `errores`).
 
+**Listados paginados:** la tabla aparece antes que las filas. Esperar por el **dato** que falta, no por la pantalla:
+`{ "esperar": "/SUT-\\d+-\\d{4}-\\d+/" }` antes de `marcar`/`foto`, o capturar con
+`{ "foto": { …, "esperarRed": true } }` (espera a que la app termine de pedir datos).
+
+**Desplegables que no son `<select>`** (react-select): el paso `elegir` los abre solo (trae el control a la vista,
+lo enfoca, pulsa `ArrowDown` y elige la opción por rol `option`). Un `click` a pelo sobre un elemento fuera de la
+ventana falla con «Element is outside of the viewport»: el paso `click` ya lo trae a la vista antes de clicar.
+
 **Selector `en`:** exactamente uno de `rol` (+ `nombre`), `etiqueta`, `placeholder`, `texto`, `testid`, `css`.
 Opcionales: `exacto`, `n` (índice) y `dentro` (otro selector que lo contiene, p. ej. un panel que no es
 `role=dialog`). Un texto `"/patron/i"` es una expresión regular.

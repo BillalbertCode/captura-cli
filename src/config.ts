@@ -19,6 +19,8 @@ export interface Config {
   rutas: { salidas?: string; recetas?: string; helpers?: string; escenarios?: string; sesiones?: string }
   adaptadores: Partial<Record<'credenciales' | 'identificador' | 'entorno' | 'publicacion' | 'correo', RefAdaptador>>
   extras: Extra[]
+  /** Comandos de solo lectura que deben pasar antes de abrir la app (VPN, base, servicios). */
+  precondiciones: string[]
   /** Hook de cierre del plugin: exige evidencia si en el turno se tocó la interfaz. Apagado por defecto. */
   evidencia: { hook: boolean; patrones: string[]; horas: number }
 }
@@ -32,12 +34,13 @@ export const DEFECTO: Config = {
   rutas: {},
   adaptadores: {},
   extras: [],
+  precondiciones: [],
   evidencia: { hook: false, patrones: ['**/*.tsx', '**/*.jsx', '**/*.vue', '**/*.svelte', '**/*.html', '**/*.css', '**/*.scss'], horas: 12 },
 }
 
 export class ConfigInvalida extends Error {}
 
-const CLAVES_RAIZ = ['$schema', 'viewport', 'sesionMin', 'apps', 'id', 'credenciales', 'rutas', 'adaptadores', 'extras', 'evidencia'] as const
+const CLAVES_RAIZ = ['$schema', 'viewport', 'sesionMin', 'apps', 'id', 'credenciales', 'rutas', 'adaptadores', 'extras', 'precondiciones', 'evidencia'] as const
 const CLAVES: Record<string, readonly string[]> = {
   evidencia: ['hook', 'patrones', 'horas'],
   viewport: ['width', 'height'],
@@ -167,6 +170,9 @@ export function normalizar(crudo: unknown, archivo: string): Config {
   const extras = c['extras'] ?? []
   exigir(Array.isArray(extras) && extras.every((x) => EXTRAS.includes(x as Extra)), archivo, 'extras', `una lista con: ${EXTRAS.join(', ')}`)
 
+  const pre = c['precondiciones'] ?? []
+  exigir(Array.isArray(pre) && pre.every(texto), archivo, 'precondiciones', 'una lista de comandos (texto), p. ej. ["bash bin/vpn.sh"]')
+
   const ev = c['evidencia'] ?? {}
   exigir(esObjeto(ev), archivo, 'evidencia', '{ "hook": bool, "patrones": ["**/*.tsx", …], "horas": n }')
   const hook = ev['hook'] ?? DEFECTO.evidencia.hook
@@ -189,6 +195,7 @@ export function normalizar(crudo: unknown, archivo: string): Config {
     rutas: rutas as Config['rutas'],
     adaptadores: ad as Config['adaptadores'],
     extras: [...new Set(extras as Extra[])],
+    precondiciones: [...(pre as string[])],
     evidencia: { hook, patrones: patrones as string[], horas },
   }
 }

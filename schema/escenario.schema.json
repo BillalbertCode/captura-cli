@@ -99,7 +99,7 @@
         "limpiar": { "const": true },
         "foto": {
           "type": "object", "additionalProperties": false, "required": ["descripcion", "leyenda"],
-          "properties": { "descripcion": { "$ref": "#/$defs/texto" }, "leyenda": { "$ref": "#/$defs/texto" }, "sinMarca": { "$ref": "#/$defs/texto" }, "completa": { "type": "boolean" } }
+          "properties": { "descripcion": { "$ref": "#/$defs/texto" }, "leyenda": { "$ref": "#/$defs/texto" }, "sinMarca": { "$ref": "#/$defs/texto" }, "completa": { "type": "boolean" }, "esperarRed": { "type": "boolean" } }
         },
         "cambio": {
           "type": "object", "additionalProperties": false, "required": ["que"],

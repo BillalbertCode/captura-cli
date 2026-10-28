@@ -7,7 +7,7 @@ import type { Browser, Page } from 'playwright'
 import { ctx } from './contexto.js'
 import { type Declaracion, crearEstado, estado, pasoActual, registrar5xx } from './estado.js'
 import { grabarAcciones } from './grabacion.js'
-import { escribirInforme } from './informe.js'
+import { escribirInforme, limpiarCorrida } from './informe.js'
 import { cerrarRecetas } from './recetas.js'
 import { CODIGOS, alSalir, cerrarTodo, salir } from './salida.js'
 import { contar } from './uso.js'
@@ -62,9 +62,16 @@ export async function abrir({ ticket, browser = 'chromium', headless = true, vie
   const page = await contexto.newPage()
   // El id va tal cual al informe, al manifest y a publicar(); la carpeta la decide el adaptador de identificador.
   const base = join(c.rutas.salidas, c.adaptadores.identificador.carpeta(ticket), subcarpeta)
+  // --limpiar (o CAPTURA_LIMPIAR=1): la corrida empieza de cero, sin los PNG ni el publicar/ de la anterior.
+  if (process.env['CAPTURA_LIMPIAR'] === '1') {
+    const borrados = limpiarCorrida(base)
+    if (borrados.length) console.log(`limpieza: ${borrados.length} cosa(s) de la corrida anterior en ${base}`)
+  }
   crearEstado(page, {
     id: ticket, dir: base, base, casos: [], cambios: [], fotos: [], marcas: [], grabar: true, acciones: [], tramos: [], recetasUsadas: [], ultimoPaso: '', errores5xx: [],
   })
+  // El id se cuenta al abrir: si el script falla después, la corrida sigue existiendo en el libro de uso.
+  contar((u) => { u.ids.push(ticket) })
   page.on('crash', () => {
     colgada = mensajeColgada(page.url(), pasoActual(page))
     salir(colgada, CODIGOS.PAGINA_COLGADA)
@@ -80,7 +87,6 @@ export async function abrir({ ticket, browser = 'chromium', headless = true, vie
     try { await c.adaptadores.publicacion.publicar(base, ticket) } catch (e) { console.error(`AVISO: publicación: ${(e as Error).message}`) }
     const e = estado(page)
     contar((u) => {
-      u.ids.push(ticket)
       u.casos.ok += e.casos.filter((x) => x.ok).length
       u.casos.falla += e.casos.filter((x) => !x.ok).length
       u.capturas += e.fotos.length

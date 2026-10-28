@@ -32,7 +32,7 @@ export type Paso =
   | { comprobar: { en: Selector; visible?: boolean; texto?: string; habilitado?: boolean } }
   | { marcar: { en: Selector; etiqueta: string; lado?: 'abajo' | 'arriba' | 'izq' | 'der' | 'dentro'; numero?: number } }
   | { limpiar: true }
-  | { foto: { descripcion: string; leyenda: string; sinMarca?: string; completa?: boolean } }
+  | { foto: { descripcion: string; leyenda: string; sinMarca?: string; completa?: boolean; esperarRed?: boolean } }
   | { cambio: { que: string; revertir?: string; revertido?: boolean } }
   | { api: { metodo: string; ruta: string; cuerpo?: unknown; status?: number } }
   | { receta: string | { id: string; args?: Record<string, unknown> } }
@@ -185,12 +185,13 @@ function validarPaso(p: unknown, ruta: string, e: Errores): void {
     }
     case 'limpiar': if (v !== true) e.add(r, `debe ser true; forma: ${forma}`); break
     case 'foto': {
-      if (!obj(['descripcion', 'leyenda', 'sinMarca', 'completa'])) break
+      if (!obj(['descripcion', 'leyenda', 'sinMarca', 'completa', 'esperarRed'])) break
       const o = v as Record<string, unknown>
       if (!texto(o['descripcion'])) e.add(`${r}.descripcion`, 'falta: nombre corto del archivo (texto)')
       if (!texto(o['leyenda'])) e.add(`${r}.leyenda`, 'falta: toda captura lleva leyenda (qué se ve y por qué importa)')
       if (o['sinMarca'] !== undefined && !texto(o['sinMarca'])) e.add(`${r}.sinMarca`, 'el motivo (texto), solo si el usuario pidió la captura sin marca')
       if (o['completa'] !== undefined && typeof o['completa'] !== 'boolean') e.add(`${r}.completa`, 'true o false')
+      if (o['esperarRed'] !== undefined && typeof o['esperarRed'] !== 'boolean') e.add(`${r}.esperarRed`, 'true o false')
       break
     }
     case 'cambio': {

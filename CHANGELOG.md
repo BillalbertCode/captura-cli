@@ -1,5 +1,31 @@
 # Cambios
 
+## Sin publicar
+
+Correcciones que salieron de usar la 1.1.2 en una tarea real (SUT-647, Portal).
+
+- **`api()` ya no recorta la respuesta.** Devuelve `{ status, texto, json }`: el texto **completo** y el JSON parseado
+  (`null` si no es JSON). Solo el log se recorta; el `JSON.parse` del script ya no falla a los 500 caracteres.
+- **Repetir una corrida ya no pisa evidencia.** `--limpiar` (en `script` y `run`) vacía la carpeta del id antes de
+  empezar (capturas, `publicar/` e informe). Al cerrar se avisa si `publicar/` tiene PNG que no están en el
+  `manifest.json`: se subirían igual.
+- **`explorar` pide el id como lo pide.** `--id <id>` en la línea de uso, `CAPTURA_ID=<id>` y un argumento suelto
+  (solo si encaja con el patrón del config); el error dice cómo pasarlo. Git Bash: `sinConversionMsys` deshace
+  también la conversión cuando `EXEPATH` apunta al bash (`…/Git/usr/bin/bash`), no solo cuando apunta a `…/Git/bin`.
+- **React-select y «Element is outside of the viewport».** `abrirSelectHasta` trae el control a la vista, lo enfoca,
+  abre el desplegable y elige la opción por rol `option`; el paso `click` de los escenarios hace
+  `scrollIntoViewIfNeeded` antes de clicar y su error sugiere `elegir`.
+- **`recetas-candidatas.md` ya no propone recetas imposibles.** El `verificar` sale de la URL y del texto de la app
+  (con los números generalizados: `/\d+ En trámite/`), nunca de la etiqueta que escribió el agente.
+- **Las corridas cuentan.** `captura-cli script` arranca el libro de uso: cada invocación queda contada con su código
+  de salida, aunque falle antes de abrir el navegador. `stats` separa por tarea (`--id SUT-NN`) y lista las corridas
+  por id.
+- **Salud del entorno.** `entorno estado` consulta el `baseUrl` de cada app y avisa si alguna no responde; el config
+  acepta `precondiciones` (comandos de solo lectura, p. ej. la VPN) que `sesion()` ejecuta antes de abrir la app y
+  que fallan con un mensaje legible.
+- **Esperas por dato.** `foto(..., { esperarRed: true })` espera a que la app termine de pedir datos antes de capturar;
+  el paso `foto` del escenario acepta `esperarRed`.
+
 ## 1.1.2 (2026-10-26)
 
 Lo que salió de la prueba de instalación desde cero con un Claude sin contexto, en un proyecto sin autenticación.

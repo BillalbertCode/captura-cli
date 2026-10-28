@@ -26,6 +26,10 @@ export default {
   no hace nada («ya estaba»); si no, ejecuta `hacer()` y vuelve a verificar. Si no se rompe, se avanza.
 - **La receta describe la pantalla, no el rol:** dos roles con la misma bandeja usan la misma receta; lo distinto son
   los datos.
+- **Qué NO es una receta:** un control. Elegir en un desplegable de react-select
+  (`getByLabel(exacto) → scrollIntoViewIfNeeded → focus → ArrowDown → getByRole('option') → clic`) ya lo hace
+  `abrirSelectHasta` (script) o el paso `elegir` (escenario): no se registra como receta. Una receta es un **flujo**
+  con su comprobación (abrir un expediente, ir hasta los datos laborales); si el flujo no se repite, no hay receta.
 - **Volcado de texto (`diagnostico`, `explorar`) solo** cuando la receta no existe o falla.
 - **Registrar** una receta apenas un paso funcionó y **antes de seguir**. Idempotente y tolerante a otro punto de
   partida (un borrador guardado que reabre en otro paso). Para asistentes que retoman un borrador: detectar el paso
